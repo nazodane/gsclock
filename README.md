@@ -27,11 +27,11 @@ Installation
 
 5. Select ''Sketch'' -> ''Include Library'' -> ''Add .zip Library'' in Arduino IDE's menu, and then select DHT-Sensors-Non-Blocking-1.0.4.zip.
 
-6. Download ''[gsclock_arduino/gsclock_arduino.ino](https://raw.githubusercontent.com/nazodane/gsclock/main/gsclock_arduino/gsclock_arduino.ino)'', the source code for arduino (a.k.a. sketch)
+6. Download ''[gsclock_arduino/gsclock_arduino.ino](https://raw.githubusercontent.com/nazodane/gsclock/main/gsclock_arduino/gsclock_arduino.ino)'', the source code for arduino (a.k.a. sketch).
 
-7. open the sketch in Arduino IDE and then upload the sketch to arduino device via Arduino IDE.
+7. Open the sketch in Arduino IDE and then upload the sketch to arduino device via Arduino IDE.
 
-8.  Install chromium-chromedriver, the browser-based application environment, via apt.
+8. Install chromium-chromedriver, the browser-based application environment, via apt.
 ```bash
 sudo apt install chromium-chromedriver
 ```
@@ -63,8 +63,8 @@ My Amazon wishlist: https://www.amazon.co.jp/hz/wishlist/ls/CCPOV7C6JTD2
 
 Motivations
 ===========
-I just realized the analog clock is important which was forgotten. I also thought to need the remembering of the current year more often because of preventing my health problem.
+I've just come to realize the importance of using an analog clock, which I had completely overlooked. Additionally, I've realized the necessity of keeping track of the current year more frequently as a means to prevent my health issues.
 
-I researched the real analog clock with displaying the year but I couldn't find it. I also researched virtual clocks on Linux but they are ... well... not good shaped at all.
+I attempted to find a physical analog clock that also displayed the year but my search was unsuccessful. I then looked into virtual clocks for Linux, but unfortunately, they didn't meet my requirements at all.
 
-Finally, I researched web analog clocks, and I was certain that the web analog clock is the right way so I recreated it to meet all my demands.
+Finally, I turned to web analog clocks and found that they were the perfect solution. I recreated one to suit all of my needs.
