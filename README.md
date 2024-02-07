@@ -4,15 +4,15 @@ Requirements
 ============
 * Ubuntu 22.04
 * [ELEGOO's UNO R3 Most Complete Starter Kit](https://www.elegoo.com/en-jp/products/elegoo-uno-most-complete-starter-kit)（ja: [最終版スタータキット](https://www.amazon.co.jp/dp/B06Y56JV64)）
-** Arduino UNO R3
-** Breadboard
-** Photoresistor
-** DHT11
-** 10kΩ register
-** 1kΩ register x2
-** Red LED
-** Button
-** many jumper wires
+  * Arduino UNO R3
+  * Breadboard
+  * Photoresistor
+  * DHT11
+  * 10kΩ register
+  * 1kΩ register x2
+  * Red LED
+  * Button
+  * many jumper wires
 
 Installation
 ============
@@ -34,7 +34,7 @@ Installation
 sudo apt install chromium-chromedriver
 ```
 
-8. Install the main program of gsclock!
+8. Install the main program of gsclock with its dependencies!
 ```bash
 pip install git+https://github.com/nazodane/gsclock.git
 ```
