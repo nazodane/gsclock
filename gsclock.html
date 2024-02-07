@@ -1,0 +1,70 @@
+<!--
+Copyright (C) 2024 Toshimitsu Kimura <lovesyao@gmail.com>
+SPDX-License-Identifier: BSD-3-Clause
+-->
+<html><head>
+<title>良い感じの時計 / Good Shaped Clock</title>
+
+<!--TODO:
+auto style changing for preventing burn-in
+-->
+<link href="styles/analog_rich.css" rel="stylesheet"/>
+</head>
+<body>
+<div class="analog_clock">
+  <div class="axis_cap"></div>
+  <div class="hands">
+    <div class="hour_hand"></div>
+    <div class="minute_hand"></div>
+    <div class="second_hand"></div>
+  </div>
+  <div class="dial_lines"></div>
+  <div>
+    <div class="infobar date"></div>
+    <div class="infobar weekday"></div>
+  </div>
+</div>
+<div class="additional">
+  <div class="infobar2" id="praw">N/A</div>
+  <div class="infobar2" id="temp">N/A</div>
+  <div class="infobar2" id="humi">N/A</div>
+</div>
+
+<script>
+var locale = window.navigator.language;
+document.documentElement.lang = locale;
+
+var clock_elms = document.getElementsByClassName('analog_clock');
+
+daiallines_html = "";
+
+for(var r = 6; r <= 360; r+=6) // TODO: millisecond line for wristwatch?
+  if(r%30 == 0)
+    daiallines_html += "<div class=\"large_dialline\" style=\"--deg: " + r + "deg;\"></div>";
+  else
+    daiallines_html += "<div class=\"small_dialline\" style=\"--deg: " + r + "deg;\"></div>";
+
+var dialLines = document.getElementsByClassName('dial_lines');
+
+/* https://stackoverflow.com/questions/22754315/for-loop-for-htmlcollection-elements */
+for(var idx in Array.from(dialLines))
+  dialLines[idx].innerHTML = daiallines_html;
+
+function clock_update() {
+  var d = new Date();
+  for(var idx in Array.from(clock_elms)) { // TODO: implement world clock
+    sty = clock_elms[idx].style;
+    sty.setProperty('--h', d.getHours());
+    sty.setProperty('--m', d.getMinutes());
+    sty.setProperty('--s', d.getSeconds());
+    // TODO: decompose for more styles
+    sty.setProperty('--date', '"' + d.toLocaleString(locale, {year: 'numeric', month: 'long', day: 'numeric'}) + '"');
+    sty.setProperty('--weekday', '"' + d.toLocaleString(locale, {weekday: 'long'}) + '"');
+  }
+}
+
+setInterval("clock_update()", 100); // TODO: add auto timing adjustment?
+</script>
+
+</body>
+</html>
