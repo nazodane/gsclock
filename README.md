@@ -27,14 +27,16 @@ Installation
 
 5. Select ''Sketch'' -> ''Include Library'' -> ''Add .zip Library'' in Arduino IDE's menu, and then select DHT-Sensors-Non-Blocking-1.0.4.zip.
 
-6. Open ''gsclock_arduino/gsclock_arduino.ino'' source code in Arduino IDE, and then upload it.
+6. Download ''[gsclock_arduino/gsclock_arduino.ino](https://raw.githubusercontent.com/nazodane/gsclock/main/gsclock_arduino/gsclock_arduino.ino)'', the source code for arduino (a.k.a. sketch)
 
-7.  Install chromium-chromedriver, the browser-based application environment.
+7. open the sketch in Arduino IDE and then upload the sketch to arduino device via Arduino IDE.
+
+8.  Install chromium-chromedriver, the browser-based application environment, via apt.
 ```bash
 sudo apt install chromium-chromedriver
 ```
 
-8. Install the main program of gsclock with its dependencies!
+9. Install the main script of gsclock and its dependencies via pip!
 ```bash
 pip install git+https://github.com/nazodane/gsclock.git
 ```

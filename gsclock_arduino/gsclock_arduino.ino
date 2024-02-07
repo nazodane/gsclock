@@ -53,7 +53,7 @@ void loop() {
   currentButtonState = buttonState;
 
 /*
-  // print out the state of the button:/home/nazo/Desktop/clock/gsclock_local/gsclock_arduino/gsclock_arduino_old.ino
+  // print out the state of the button
   Serial.print("working state: "); 
   Serial.print(currentWorkingState);
   Serial.print(" // button state: "); 
