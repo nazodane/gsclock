@@ -31,6 +31,12 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 # gsclock_arduino/gsclock_arduino.ino
+Copyright (C) 2024 Toshimitsu Kimura <lovesyao@gmail.com>
+Copyright (C) 2023 Toan Nguyen
+
+The some parts of the code are borrowed from https://github.com/toannv17/DHT-Sensors-Non-Blocking .
+
+
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -234,7 +240,7 @@ POSSIBILITY OF SUCH DAMAGE.
    limitations under the License.
 
 # styles/*.jpg
-Borrowed from rawpixel's Public Domain images:
+The images are borrowed from rawpixel's Public Domain images:
 https://www.rawpixel.com/image/5912626
 https://www.rawpixel.com/image/3299811
 https://www.rawpixel.com/image/6032019
@@ -363,7 +369,7 @@ express Statement of Purpose.
  d. Affirmer understands and acknowledges that Creative Commons is n
 
 # sp-setofont.ttf (瀬戸フォント-SP)
-Borrowed from: https://ja.osdn.net/projects/setofont/
+The font is borrowed from: https://ja.osdn.net/projects/setofont/
 
 Copyright (C) 2014 かにさわ (https://ja.osdn.net/users/twinklem_seto/)
 
