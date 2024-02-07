@@ -16,23 +16,32 @@ Requirements
 
 Installation
 ============
-1. Setup your Arduino Uno R3 like this (XXX: not safety-verified):
-![Arduino Setup Image](gsclock_arduino_uno_sketch.png)
-
-2. Download and install the Arduino IDE from [the official site](https://www.arduino.cc/en/software).
-
-3. Open the '''Arduino IDE'''.
-
-4. Download ''[gsclock_arduino/gsclock_arduino.ino](https://raw.githubusercontent.com/nazodane/gsclock/main/gsclock_arduino/gsclock_arduino.ino)'', the source code for arduino (a.k.a. sketch).
-
-5. Open the sketch in Arduino IDE and then upload the sketch to arduino device via Arduino IDE.
-
-6. Install chromium-chromedriver, the browser-based application environment, via apt.
+1. Install the following packages via apt.
+* chromium-chromedriver, the browser-based application environment
+* gcc-avr and avr-libc, the [cross compiler](https://en.wikipedia.org/wiki/Cross_compiler) for Arduino MPU
+* arduino-core-avr, the library for Arduino codes
+* avrdude, the uploading utility for Arduino
 ```bash
-sudo apt install chromium-chromedriver
+sudo apt install chromium-chromedriver gcc-avr avr-libc arduino-core-avr avrdude
 ```
 
-7. Install the main script of gsclock and its dependencies via pip!
+2. Setup your Arduino Uno R3 like this (XXX: not safety-verified yet):
+![Arduino Setup Image](gsclock_arduino_uno_sketch.png)
+
+3. Download ''[gsclock_arduino.ino](https://raw.githubusercontent.com/nazodane/gsclock/main/gsclock_arduino.ino)'', the source code for arduino (a.k.a. sketch).
+
+4. Compile the arduino program via avr-gcc (or open gsclock_arduino.ino Arduino IDE)
+```bash
+avr-gcc -specs=avr-gcc-arduino.specs -Os -Wall -mmcu=atmega328p -ffunction-sections -fdata-sections -DF_CPU=16000000L -DARDUINO=10807 -DARDUINO_AVR_UNO -DARDUINO_ARCH_AVR -I/usr/share/arduino/hardware/arduino/avr/cores/arduino -I/usr/share/arduino/hardware/arduino/avr/variants/standard  /usr/share/arduino/hardware/arduino/avr/cores/arduino/*.cpp  /usr/share/arduino/hardware/arduino/avr/cores/arduino/*.c -x c++ gsclock_arduino.ino -o gsclock_arduino.elf
+```
+
+5. Upload the arduino program to the your Arduino Uno R3 via avrdude (or just upload via Arduino IDE)
+```bash
+avr-objcopy -O ihex gsclock_arduino.elf gsclock_arduino.hex
+avrdude -c arduino -p atmega328p -b 115200 -P /dev/ttyACM0 -U flash:w:gsclock_arduino.hex
+```
+
+6. Install the main script of gsclock and its dependencies via pip!
 ```bash
 pip install git+https://github.com/nazodane/gsclock.git
 ```

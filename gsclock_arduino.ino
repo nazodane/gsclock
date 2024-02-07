@@ -3,8 +3,8 @@ Copyright (C) 2024 Toshimitsu Kimura <lovesyao@gmail.com>
 SPDX-License-Identifier: Apache-2.0
 */
 
-//#include <DHT_Async.h>
 
+//#include <DHT_Async.h>
 
 /*
 Copyright (C) 2023 Toan Nguyen
