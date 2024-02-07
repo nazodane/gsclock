@@ -5,6 +5,7 @@ from time import sleep
 import requests
 import re
 import os
+from os.path import expanduser
 
 CLOCK_MONITOR = "HDMI-1-1" # you should specify vertical monitor
 
@@ -107,7 +108,14 @@ if __name__ == '__main__':
     print("QUERY: chrome window opening via selenium module")
     chrome_options = Options()
     chrome_options.add_experimental_option("excludeSwitches", ['enable-automation'])
-    chrome_options.add_argument("--app=file://%s/gsclock.html"%(os.getcwd()))
+    html_path = "%s/gsclock.html"%(os.path.dirname(__file__))
+    print(os.path.dirname(__file__))
+    if not os.path.exists(html_path):
+        html_path = expanduser("~") + "/.local/share/gsclock/gsclock.html"
+    if not os.path.exists(html_path):
+        print("FAILED: no gsclock.html found...")
+        exit()
+    chrome_options.add_argument("--app=file://" + html_path)
     chrome_options.add_argument("--window-position=%s,%s"%(m.x, m.y))
     chrome_options.add_argument("--start-fullscreen")
     chrome_service = fs.Service(executable_path="/usr/lib/chromium-browser/chromedriver")
