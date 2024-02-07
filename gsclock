@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright (C) 2024 Toshimitsu Kimura a.k.a. Nazodane <lovesyao@gmail.com>
+# Copyright (C) 2024 Toshimitsu Kimura <lovesyao@gmail.com>
 # SPDX-License-Identifier: BSD-3-Clause
 from time import sleep
 import requests
@@ -112,6 +112,7 @@ if __name__ == '__main__':
     print("SUCCESS: chrome window opened")
 
     print("QUERY: chrome window stickying via wmctrl")
+    # pip install wmctrl
     from wmctrl import Window
 
     title_bak = driver.execute_script("return document.title;")
@@ -137,4 +138,5 @@ if __name__ == '__main__':
         except:
             print("TODO")
             pass
+# TODO: chromeウインドウを閉じたら閉じる
 
