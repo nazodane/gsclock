@@ -33,7 +33,7 @@ setup(
     install_requires=install_requires,
     scripts=["gsclock"],
     data_files=[
-        ('share/gsclock', ["gsclock.html"]),
+        ('share/gsclock', ["gsclock.html", "avr-gcc-arduino.specs", "gsclock_arduino.ino"]),
         ('share/gsclock/styles', glob("styles/*"))
     ],
     classifiers=[
