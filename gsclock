@@ -103,6 +103,7 @@ if __name__ == '__main__':
     from selenium.webdriver.chrome import service as fs
     from selenium.common.exceptions import WebDriverException
     from selenium.webdriver.common.by import By
+#    from selenium.common import WebDriverException
     print("QUERY: chrome window opening via selenium module")
     chrome_options = Options()
     chrome_options.add_experimental_option("excludeSwitches", ['enable-automation'])
@@ -141,6 +142,13 @@ if __name__ == '__main__':
             sleep(1)
             arduino = connect_to_arduino()
             continue
+
+        try:
+            _ = driver.window_handles
+        except: #except WebDriverException:
+            print("No selenium window found, exiting...")
+            exit()
+
         try:
 #            line = arduino.readline().decode('utf-8').rstrip()
             line = arduino.read_until().decode('utf-8').rstrip()
@@ -155,6 +163,4 @@ if __name__ == '__main__':
             if arduino:
                 arduino.close()
             arduino = connect_to_arduino()
-
-# TODO: chromeウインドウを閉じたら閉じる
 
