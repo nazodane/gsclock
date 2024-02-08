@@ -5,24 +5,22 @@ from time import sleep
 import os
 from os.path import expanduser
 
-CLOCK_MONITOR = "HDMI-1-1" # you should specify vertical monitor
-
-print("QUERY: clock monitor check via screeninfo module")
+print("QUERY: vertical monitor check via screeninfo module")
 clock_monitor = None
 # pip install screeninfo
 from screeninfo import get_monitors
 for m in get_monitors():
-    if m.name == CLOCK_MONITOR:
+    if m.height > m.width: # find vertical monitor
         print("Found: " + str(m))
         clock_monitor = m
         break
     print("Ignore: " + str(m))
 
 if not clock_monitor:
-    print("FAILED: no clock monitor found!")
+    print("FAILED: no vertical monitor found!")
     exit()
 
-print("SUCCESS: clock monitor found!")
+print("SUCCESS: vertical monitor found!")
 
 
 # 他にユーザーの居るシリアルコンソールは基本的に奪わないようにする
@@ -115,8 +113,9 @@ if __name__ == '__main__':
         print("FAILED: no gsclock.html found...")
         exit()
     chrome_options.add_argument("--app=file://" + html_path)
-    chrome_options.add_argument("--window-position=%s,%s"%(m.x, m.y))
+    chrome_options.add_argument("--window-position=%s,%s"%(clock_monitor.x, clock_monitor.y))
     chrome_options.add_argument("--start-fullscreen")
+#    chrome_options.add_argument("--kiosk")
     chrome_service = fs.Service(executable_path="/usr/lib/chromium-browser/chromedriver")
     driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
     print("SUCCESS: chrome window opened")
