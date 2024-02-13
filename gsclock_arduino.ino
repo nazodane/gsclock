@@ -3,15 +3,17 @@ Copyright (C) 2024 Toshimitsu Kimura <lovesyao@gmail.com>
 SPDX-License-Identifier: Apache-2.0
 */
 
-
 #include "DHT-Sensors-Non-Blocking/DHT_Async.cpp"
+#include "Tone/Tone.h"
+//#include "Arduino-IRremote/src/IRReceive.hpp" # or IRMP?
+//#include <EEPROM.h> # save the IR remote control code for home lighting. lowest on/off/up/down?
 
 /*
 Unique code for gsclock
 */
 #define DHT_SENSOR_TYPE DHT_TYPE_11
 
-static const int DHT_SENSOR_PIN = 7;
+static const int DHT_SENSOR_PIN = 7; // D7
 
 /*
 Copyright (C) 2023 Toan Nguyen
@@ -38,6 +40,7 @@ static bool measure_environment(float *temperature, float *humidity) {
 
 int powerButtonPin = 2; // D2
 int powerLedPin = 4; // D4
+int activeBuzzerPin = 8; //D8
 int photoresistorPin = 0; // A0
 int direct3V3VoltagePin = 5;  // A5
 int currentButtonState = FALSE;
@@ -68,6 +71,44 @@ void loop() {
 
   if (currentWorkingState){
     digitalWrite(powerLedPin, HIGH);
+
+/*
+// school chime
+    tone(activeBuzzerPin, NOTE_F5, 500);
+    delay(500);
+    tone(activeBuzzerPin, NOTE_A5, 500);
+    delay(500);
+    tone(activeBuzzerPin, NOTE_G5, 500);
+    delay(500);
+    tone(activeBuzzerPin, NOTE_C5, 1500);
+    delay(1500);
+
+    tone(activeBuzzerPin, NOTE_F5, 500);
+    delay(500);
+    tone(activeBuzzerPin, NOTE_G5, 500);
+    delay(500);
+    tone(activeBuzzerPin, NOTE_A5, 500);
+    delay(500);
+    tone(activeBuzzerPin, NOTE_F5, 1500);
+    delay(1500);
+
+    tone(activeBuzzerPin, NOTE_A5, 500);
+    delay(500);
+    tone(activeBuzzerPin, NOTE_F5, 500);
+    delay(500);
+    tone(activeBuzzerPin, NOTE_G5, 500);
+    delay(500);
+    tone(activeBuzzerPin, NOTE_C5, 1500);
+    delay(1500);
+
+    tone(activeBuzzerPin, NOTE_C5, 500);
+    delay(500);
+    tone(activeBuzzerPin, NOTE_G5, 500);
+    delay(500);
+    tone(activeBuzzerPin, NOTE_A5, 500);
+    delay(500);
+    tone(activeBuzzerPin, NOTE_F5, 1500);
+    delay(1500);*/
 
 /*
     int direct3V3 = analogRead(direct3V3VoltagePin);

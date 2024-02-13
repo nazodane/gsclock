@@ -1,3 +1,6 @@
 [submodule "DHT-Sensors-Non-Blocking"]
 	path = DHT-Sensors-Non-Blocking
 	url = https://github.com/toannv17/DHT-Sensors-Non-Blocking.git
+[submodule "Tone"]
+	path = Tone
+	url = https://github.com/bhagman/Tone.git
