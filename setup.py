@@ -17,6 +17,14 @@ install_requires = [
     "wmctrl",
 ]
 
+from distutils.command.install import install as DistutilsInstall
+import os
+
+class MyInstall(DistutilsInstall):
+    def run(self):
+        os.system("make all")
+        DistutilsInstall.run(self)
+
 setup(
     name = "gsclock",
     version = "0.0.1",
@@ -26,14 +34,14 @@ setup(
     license = "BSD-3-Clause",
     keywords = "clock analog_clock",
     url = "https://github.com/nazodane/gsclock",
-#    packages=['gsclock_pkg'],
+    packages=[], #'gsclock_pkg'
     include_package_data = True,
     long_description=read('README.md'),
     python_requires=">=3.10.0",
     install_requires=install_requires,
     scripts=["gsclock"],
     data_files=[
-        ('share/gsclock', ["gsclock.html", "avr-gcc-arduino.specs", "gsclock_arduino.ino"]),
+        ('share/gsclock', ["gsclock.html", "avr-gcc-arduino.specs", "gsclock_arduino_uno_sketch.png", "gsclock_arduino.ino", "gsclock_arduino.hex"]),
         ('share/gsclock/styles', glob("styles/*"))
     ],
     classifiers=[
@@ -44,4 +52,5 @@ setup(
         "Operating System :: POSIX :: Linux",
         "Intended Audience :: End Users/Desktop",
     ],
+    cmdclass={'install': MyInstall},
 )

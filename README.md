@@ -7,12 +7,19 @@ Requirements
   * Arduino UNO R3
   * Breadboard
   * Photoresistor
-  * DHT11
-  * 10kΩ register
-  * 1kΩ register x2
+  * DHT11 Temperature and Humidity Module
+  * 10kΩ register x2
+  * 1kΩ register x3
+  * 10Ω register
+  * Potentiometer
+  * Passive Buzzer
   * Red LED
-  * Button
+  * Green LED
+  * IR Reciever Module
+  * Button x2
   * many jumper wires
+* [BreadBoard BB-801](https://akizukidenshi.com/catalog/g/g105294/) (Half+ Size)
+* [OSI5LA5A33A-B](https://akizukidenshi.com/catalog/g/g113204/) (IR LED) x3
 
 Installation
 ============
@@ -29,22 +36,17 @@ sudo apt install psmisc chromium-chromedriver gcc-avr avr-libc arduino-core-avr 
 2. Setup your Arduino Uno R3 like this (XXX: not safety-verified yet):
 ![Arduino Setup Image](gsclock_arduino_uno_sketch.png)
 
-3. Install the main script of gsclock and its dependencies via pip!
+3. Install the main script of gsclock and its dependencies via pip! The build starts automatically!
 ```bash
 pip install git+https://github.com/nazodane/gsclock.git
 ```
 
-4. Compile the arduino program via avr-gcc (or just open ~/.local/share/gsclock/gsclock_arduino.ino in Arduino IDE)
+4a. Upload the arduino program to the your Arduino Uno R3 via avrdude
 ```bash
-cd /tmp
-avr-gcc -specs=$HOME/.local/share/gsclock/avr-gcc-arduino.specs -Os -Wall -mmcu=atmega328p -ffunction-sections -fdata-sections -DF_CPU=16000000L -DARDUINO=10807 -DARDUINO_AVR_UNO -DARDUINO_ARCH_AVR -I/usr/share/arduino/hardware/arduino/avr/cores/arduino -I/usr/share/arduino/hardware/arduino/avr/variants/standard  /usr/share/arduino/hardware/arduino/avr/cores/arduino/*.cpp  /usr/share/arduino/hardware/arduino/avr/cores/arduino/*.c -x c++ ~/.local/share/gsclock/gsclock_arduino.ino -o gsclock_arduino.elf
+avrdude -c arduino -p atmega328p -b 115200 -P /dev/ttyACM0 -U flash:w:~/.local/share/gsclock/gsclock_arduino.hex
 ```
 
-5. Upload the arduino program to the your Arduino Uno R3 via avrdude (or just upload via Arduino IDE)
-```bash
-avr-objcopy -O ihex gsclock_arduino.elf gsclock_arduino.hex
-avrdude -c arduino -p atmega328p -b 115200 -P /dev/ttyACM0 -U flash:w:gsclock_arduino.hex
-```
+4b. Install and Launch the Arduino IDE, open ~/.local/share/gsclock/gsclock_arduino.ino, and upload the Arduino program to your Arduino Uno R3 via the Arduino IDE.
 
 
 Usage

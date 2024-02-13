@@ -5,7 +5,9 @@ SPDX-License-Identifier: Apache-2.0
 
 #include "DHT-Sensors-Non-Blocking/DHT_Async.cpp"
 #include "Tone/Tone.h"
-//#include "Arduino-IRremote/src/IRReceive.hpp" # or IRMP?
+
+#define IR_USE_AVR_TIMER1 // timer1 for tone, timer2 for ir recv
+#include "Arduino-IRremote/src/IRremote.hpp" // or IRMP?
 //#include <EEPROM.h> # save the IR remote control code for home lighting. lowest on/off/up/down?
 
 /*
@@ -41,25 +43,58 @@ static bool measure_environment(float *temperature, float *humidity) {
 int powerButtonPin = 2; // D2
 int powerLedPin = 4; // D4
 int activeBuzzerPin = 8; //D8
+int irRecieveButtonPin = 10; //D10
+int irLedPin = 9; // D9
+int irReceivePin = 5;  // D5
+int irSendPin = 3; // D3
 int photoresistorPin = 0; // A0
 int direct3V3VoltagePin = 5;  // A5
 int currentButtonState = FALSE;
+int currentIrButtonState = FALSE;
 
 //bool currentWorkingState = FALSE;
 bool currentWorkingState = TRUE;
+
+bool currentIrModeState = FALSE;
 
 void setup() {
   Serial.begin(9600);
   pinMode(powerButtonPin, INPUT);
   pinMode(powerLedPin, OUTPUT);
+  pinMode(irRecieveButtonPin, INPUT);
+  pinMode(irLedPin, OUTPUT);
 }
 
 void loop() {
   int buttonState = digitalRead(powerButtonPin);
-  if(buttonState && buttonState != currentButtonState){
-      currentWorkingState = !currentWorkingState;
+  if (buttonState && buttonState != currentButtonState){
+    currentWorkingState = !currentWorkingState;
   }
+
   currentButtonState = buttonState;
+
+  if (currentWorkingState) {
+    digitalWrite(powerLedPin, HIGH);
+
+    int irButtonState = digitalRead(irRecieveButtonPin);
+    if (irButtonState && irButtonState != currentIrButtonState){
+      currentIrModeState = !currentIrModeState;
+      if (currentWorkingState){
+        IrReceiver.begin(irReceivePin, ENABLE_LED_FEEDBACK); // internal led feedback = on
+      } else {
+        IrReceiver.stop();
+      }
+    }
+    currentIrButtonState = irButtonState;
+    if (currentIrModeState)
+      digitalWrite(irLedPin, HIGH);
+    else
+      digitalWrite(irLedPin, LOW);
+  } else {
+    digitalWrite(irLedPin, LOW); // LOW = 0.47V on Elegoo Uno R3 VREF=5.06V
+    currentIrModeState = FALSE;
+    digitalWrite(powerLedPin, LOW);
+  }
 
 /*
   // print out the state of the button
@@ -70,7 +105,6 @@ void loop() {
 */
 
   if (currentWorkingState){
-    digitalWrite(powerLedPin, HIGH);
 
 /*
 // school chime
@@ -127,6 +161,32 @@ void loop() {
     Serial.println(actualRef5V);
 */
 
+/*
+    if (IrReceiver.decode()) {
+        struct IRData *irdata = &IrReceiver.decodedIRData;
+        Serial.println(irdata->decodedRawData, HEX); // Print "old" raw data
+        // USE NEW 3.x FUNCTIONS
+        IrReceiver.printIRResultShort(&Serial); // Print complete received data in one line
+        IrReceiver.printIRSendUsage(&Serial);   // Print the statement required to send this data
+        IrReceiver.printIRResultRawFormatted(&Serial, true);
+        dump(irdata->rawDataPtr);
+        //tone(activeBuzzerPin, NOTE_C5, 1);
+        delay(500);
+        IrReceiver.resume(); // Enable receiving of the next value
+        delay(500);
+//        Serial.println(irdata->rawDataPtr->rawlen* sizeof(*irdata->rawDataPtr->rawbuf));
+// https://forum.arduino.cc/t/problems-with-irsend-sendraw-sending-raw-ir-code/166479
+
+        for (int i = 0; i < irdata->rawDataPtr->rawlen - 1; i++)
+            rawbuf_for_send[i] = irdata->rawDataPtr->rawbuf[i+1] * MICROS_PER_TICK;
+
+        rawbuf_for_send[irdata->rawDataPtr->rawlen - 1] = 0;
+//        Serial.println(sizeof(int) == sizeof(*irdata->rawDataPtr->rawbuf));
+        IrSender.sendRaw(rawbuf_for_send, irdata->rawDataPtr->rawlen, MICROS_PER_TICK / *kHZ* /);
+    }
+*/
+
+
     int praw = analogRead(photoresistorPin);
     Serial.print("praw: ");
     Serial.println(praw);
@@ -144,7 +204,5 @@ void loop() {
     delay(500);  // delay in between reads for stability
     return;
   }
-  digitalWrite(powerLedPin, LOW);
-  // led off  
   delay(500);  // delay in between reads for stability
 }
