@@ -421,6 +421,7 @@ static bool measure_environment(float *temperature, float *humidity) {
 int powerButtonPin = 2; // D2
 int powerLedPin = 4; // D4
 int photoresistorPin = 0; // A0
+int direct3V3VoltagePin = 5;  // A5
 int currentButtonState = FALSE;
 
 //bool currentWorkingState = FALSE;
@@ -449,8 +450,25 @@ void loop() {
 
   if (currentWorkingState){
     digitalWrite(powerLedPin, HIGH);
-    int praw = analogRead(photoresistorPin);
 
+/*
+    int direct3V3 = analogRead(direct3V3VoltagePin);
+
+    Serial.print("d3V3: ");
+    Serial.println(direct3V3);
+
+    const float actual3V3 = 3.32;  // for Elegoo Uno R3; invariant across USB ports
+    // https://forum.arduino.cc/t/dividing-by-1023-or-1024-the-final-verdict-on-analogread/516322
+    float actualRef5V = actual3V3 * 1024 / (direct3V3+0.5);
+    //    const int actualRef5V = 5.06;
+    //    float actual3V3 = ((float)d3V3+0.5) * actualRef5V / 1024;
+    //    Serial.print("actual3V3: ");
+    //    Serial.println(actual3V3);
+    Serial.print("ar5V: ");
+    Serial.println(actualRef5V);
+*/
+
+    int praw = analogRead(photoresistorPin);
     Serial.print("praw: ");
     Serial.println(praw);
 
