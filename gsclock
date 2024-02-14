@@ -53,6 +53,7 @@ def connect_to_arduino():
     serial_number = device.properties.get("ID_SERIAL") # or ID_SERIAL_SHORT
     print("candidate of the arduino serial port: %s %s:%s %s"%(port, vendor_id, model_id, serial_number))
 
+    first_line = None
     count = 3
     while count > 0:
       count -= 1
@@ -69,9 +70,9 @@ def connect_to_arduino():
         arduino = serial.Serial(port, 9600, timeout=1)
         arduino.flush()
         arduino.read_until().decode('utf-8').rstrip() # drop the garbage input
-        line = arduino.read_until().decode('utf-8').rstrip()
+        first_line = arduino.read_until().decode('utf-8').rstrip()
         print(line)
-        if line.startswith(("praw:", "temp:", "humi:")):
+        if first_line.startswith(("praw:", "temp:", "humi:", "mesg:")):
           break
         arduino.close()
         arduino = None
@@ -89,7 +90,7 @@ def connect_to_arduino():
 
   print("SUCCESS: arduino serial port found!")
 
-  return arduino
+  return (arduino, first_line)
 
 
 CLOCK_SIZE = 1080
@@ -134,12 +135,12 @@ if __name__ == '__main__':
 
     print("SUCCESS: chrome window stickied")
 
-    arduino = connect_to_arduino()
+    arduino, line = connect_to_arduino()
 
     while True:
         if not arduino:
             sleep(1)
-            arduino = connect_to_arduino()
+            arduino, line = connect_to_arduino()
             continue
 
         try:
@@ -150,10 +151,11 @@ if __name__ == '__main__':
 
         try:
 #            line = arduino.readline().decode('utf-8').rstrip()
+            if (len(line) > 6 and line[4] == ':'):
+                elm = driver.find_element(By.ID, line[0:4])
+                driver.execute_script("arguments[0].innerText = arguments[1]", elm, line[6:])
             line = arduino.read_until().decode('utf-8').rstrip()
             print(line)
-            elm = driver.find_element(By.ID, line[0:4])
-            driver.execute_script("arguments[0].innerText = arguments[1]", elm, line[6:])
         except KeyboardInterrupt:
             print("Keybord interrupt, exiting...")
             exit()
@@ -161,5 +163,5 @@ if __name__ == '__main__':
             # reconnect to arduino
             if arduino:
                 arduino.close()
-            arduino = connect_to_arduino()
+            arduino, line = connect_to_arduino()
 

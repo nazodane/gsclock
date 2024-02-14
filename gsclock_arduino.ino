@@ -6,9 +6,27 @@ SPDX-License-Identifier: Apache-2.0
 #include "DHT-Sensors-Non-Blocking/DHT_Async.cpp"
 #include "Tone/Tone.h"
 
-#define IR_USE_AVR_TIMER1 // timer1 for tone, timer2 for ir recv
+#define IR_USE_AVR_TIMER1 // timer1 for ir recv and timer2 for tone
+#define RAW_BUFFER_LENGTH 100 // just in case
+#define NO_DECODER // just resend the raw data so the decoders are not needed
 #include "Arduino-IRremote/src/IRremote.hpp" // or IRMP?
 //#include <EEPROM.h> # save the IR remote control code for home lighting. lowest on/off/up/down?
+
+
+// EEPROM[0..4] = GS00
+// EEPROM[5] = LIGHTING FULL LIGHT IR COMMAND SIZE
+// EEPROM[6] = LIGHTING NIGHT LIGHT IR COMMAND SIZE
+// EEPROM[7] = LIGHTING LIGHT OUT IR COMMAND SIZE
+// EEPROM[8] = LIGHTING LIGHTER IR COMMAND SIZE
+// EEPROM[9] = LIGHTING DARKER IR COMMAND SIZE
+// EEPROM[1023 - EEPROM[5]..1023] = LIGHTING FULL LIGHT IR COMMAND
+// EEPROM[1023 - sum(EEPROM[5..6])..1023 - EEPROM[5]] = LIGHTING NIGHT LIGHT IR COMMAND
+// EEPROM[1023 - sum(EEPROM[5..7])..1023 - sum(EEPROM[5..6])] = LIGHTING LIGHT OUT IR COMMAND
+// EEPROM[1023 - sum(EEPROM[5..8])..1023 - sum(EEPROM[5..7])] = LIGHTING LIGHTER IR COMMAND
+// EEPROM[1023 - sum(EEPROM[5..9])..1023 - sum(EEPROM[5..8])] = LIGHTING DARKER IR COMMAND
+
+const char *IR_COMMAND_NAMES[] = { "full light", "night light",  "light out", "lighter", "darker"};
+#define IR_COMMAND_LEN sizeof(IR_COMMAND_NAMES) / sizeof(IR_COMMAND_NAMES[0])
 
 /*
 Unique code for gsclock
@@ -43,7 +61,7 @@ static bool measure_environment(float *temperature, float *humidity) {
 int powerButtonPin = 2; // D2
 int powerLedPin = 4; // D4
 int activeBuzzerPin = 8; //D8
-int irRecieveButtonPin = 10; //D10
+int irReceiveButtonPin = 10; //D10
 int irLedPin = 9; // D9
 int irReceivePin = 5;  // D5
 int irSendPin = 3; // D3
@@ -56,19 +74,43 @@ int currentIrButtonState = FALSE;
 bool currentWorkingState = TRUE;
 
 bool currentIrModeState = FALSE;
+size_t irWaintingCommand = 0;
+
+void print_power_change() {
+  Serial.print("mesg: power ");
+  Serial.println(currentWorkingState?"on":"off");
+}
+
+void print_irreceiver_change() {
+  Serial.print("mesg: ir code registration ");
+  Serial.print(currentIrModeState?"on; waiting ":"off");
+
+  if (currentIrModeState) {
+    Serial.print(IR_COMMAND_NAMES[irWaintingCommand]);
+    Serial.println(" code...");
+  } else if (irWaintingCommand == IR_COMMAND_LEN - 1)
+    Serial.println("; the registration succeeded!");
+  else
+    Serial.println();
+}
 
 void setup() {
   Serial.begin(9600);
   pinMode(powerButtonPin, INPUT);
   pinMode(powerLedPin, OUTPUT);
-  pinMode(irRecieveButtonPin, INPUT);
+  pinMode(irReceiveButtonPin, INPUT);
   pinMode(irLedPin, OUTPUT);
+  print_power_change();
 }
+
+
+unsigned int rawbuf_for_send[RAW_BUFFER_LENGTH];
 
 void loop() {
   int buttonState = digitalRead(powerButtonPin);
   if (buttonState && buttonState != currentButtonState){
     currentWorkingState = !currentWorkingState;
+    buttonState = 2; // power change print delay
   }
 
   currentButtonState = buttonState;
@@ -76,10 +118,11 @@ void loop() {
   if (currentWorkingState) {
     digitalWrite(powerLedPin, HIGH);
 
-    int irButtonState = digitalRead(irRecieveButtonPin);
+    int irButtonState = digitalRead(irReceiveButtonPin);
     if (irButtonState && irButtonState != currentIrButtonState){
       currentIrModeState = !currentIrModeState;
-      if (currentWorkingState){
+      irButtonState = 2; // irreceiver change print delay
+      if (currentIrModeState) {
         IrReceiver.begin(irReceivePin, ENABLE_LED_FEEDBACK); // internal led feedback = on
       } else {
         IrReceiver.stop();
@@ -90,11 +133,21 @@ void loop() {
       digitalWrite(irLedPin, HIGH);
     else
       digitalWrite(irLedPin, LOW);
+    if (irButtonState == 2) { // irreceiver change print delay
+      print_irreceiver_change();
+      irWaintingCommand = 0;
+    }
   } else {
-    digitalWrite(irLedPin, LOW); // LOW = 0.47V on Elegoo Uno R3 VREF=5.06V
-    currentIrModeState = FALSE;
+    digitalWrite(irLedPin, LOW); // LOW = 0.47V on Elegoo Uno R3 when VREF=5.06V
+    if (currentIrModeState) {
+      currentIrModeState = FALSE;
+      print_irreceiver_change();
+    }
     digitalWrite(powerLedPin, LOW);
   }
+  if (buttonState == 2) // power change print delay
+    print_power_change();
+
 
 /*
   // print out the state of the button
@@ -104,8 +157,56 @@ void loop() {
   Serial.println(currentButtonState);
 */
 
-  if (currentWorkingState){
 
+  if (currentIrModeState) {
+    if (IrReceiver.decode()) {
+        struct IRData *irdata = &IrReceiver.decodedIRData;
+
+        size_t len = (irdata->rawDataPtr->rawlen + 1) / 2;
+        if (len <= 1)
+            goto ir_end;
+
+        Serial.print("mesg: ir code registration: ");
+        if (irdata->flags & IRDATA_FLAGS_WAS_OVERFLOW) {
+          Serial.println(F("received overflow"));
+          return;
+        }
+        Serial.print(len, DEC);
+        Serial.println(F(" bits (incl. gap and start) received"));
+
+//        Serial.println(irdata->decodedRawData, HEX);
+//        IrReceiver.printIRResultShort(&Serial);
+//        IrReceiver.printIRSendUsage(&Serial);
+//        IrReceiver.printIRResultRawFormatted(&Serial, true);
+
+        tone(activeBuzzerPin, NOTE_C5, 1);
+
+        for (int i = 0; i < irdata->rawDataPtr->rawlen - 1; i++)
+            rawbuf_for_send[i] = irdata->rawDataPtr->rawbuf[i+1] * MICROS_PER_TICK;
+
+        rawbuf_for_send[irdata->rawDataPtr->rawlen - 1] = 0;
+
+        delay(1000);
+        if (irWaintingCommand < IR_COMMAND_LEN - 1) {
+            irWaintingCommand ++;
+            IrReceiver.resume();
+        } else {
+            currentIrModeState = FALSE;
+            IrReceiver.stop();
+        }
+        print_irreceiver_change();
+
+//        delay(500);
+//        IrSender.sendRaw(rawbuf_for_send, irdata->rawDataPtr->rawlen, MICROS_PER_TICK / *kHZ* /);
+    }
+  }
+  ir_end:
+
+
+  if (currentWorkingState) {
+
+
+// 音楽を変えられるようにする？ EEPROMに保存する？ならす時間もEEPROMに保存する？デジタル時刻表示も欲しくなるけど過剰、かなぁ。
 /*
 // school chime
     tone(activeBuzzerPin, NOTE_F5, 500);
@@ -161,31 +262,12 @@ void loop() {
     Serial.println(actualRef5V);
 */
 
-/*
-    if (IrReceiver.decode()) {
-        struct IRData *irdata = &IrReceiver.decodedIRData;
-        Serial.println(irdata->decodedRawData, HEX); // Print "old" raw data
-        // USE NEW 3.x FUNCTIONS
-        IrReceiver.printIRResultShort(&Serial); // Print complete received data in one line
-        IrReceiver.printIRSendUsage(&Serial);   // Print the statement required to send this data
-        IrReceiver.printIRResultRawFormatted(&Serial, true);
-        dump(irdata->rawDataPtr);
-        //tone(activeBuzzerPin, NOTE_C5, 1);
-        delay(500);
-        IrReceiver.resume(); // Enable receiving of the next value
-        delay(500);
-//        Serial.println(irdata->rawDataPtr->rawlen* sizeof(*irdata->rawDataPtr->rawbuf));
-// https://forum.arduino.cc/t/problems-with-irsend-sendraw-sending-raw-ir-code/166479
+// 送信するIRデータはEEPROMに保存する
+// LUX閾値もEEPROMに保存する
 
-        for (int i = 0; i < irdata->rawDataPtr->rawlen - 1; i++)
-            rawbuf_for_send[i] = irdata->rawDataPtr->rawbuf[i+1] * MICROS_PER_TICK;
 
-        rawbuf_for_send[irdata->rawDataPtr->rawlen - 1] = 0;
-//        Serial.println(sizeof(int) == sizeof(*irdata->rawDataPtr->rawbuf));
-        IrSender.sendRaw(rawbuf_for_send, irdata->rawDataPtr->rawlen, MICROS_PER_TICK / *kHZ* /);
-    }
-*/
 
+// 人感センサー試す
 
     int praw = analogRead(photoresistorPin);
     Serial.print("praw: ");

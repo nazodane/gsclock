@@ -153,7 +153,7 @@ body{
   background-clip: text;
 }
 
-.infobar, .infobar2 {
+.infobar, .infobar2, .infobar3 {
   z-index: 2;
   width: 32vw;
   height: 5.4vw;
@@ -179,6 +179,21 @@ body{
   margin-top: 5.4vw;
   display: inline-block;
   width: 26vw;
+}
+
+.infobar3 {
+  margin-top: 10vw;
+  width: 80vw;
+  height: 8vw;
+  line-height: 4vw;
+
+  margin-left: 10vw;
+  margin-right: 10vw;
+  border-radius: 0px;
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 }
 
 .additional {
