@@ -4,22 +4,22 @@ Requirements
 ============
 * Ubuntu 22.04
 * [ELEGOO's UNO R3 Most Complete Starter Kit](https://www.elegoo.com/en-jp/products/elegoo-uno-most-complete-starter-kit)（ja: [最終版スタータキット](https://www.amazon.co.jp/dp/B06Y56JV64)）
-  * Arduino UNO R3
-  * Breadboard
-  * Photoresistor
-  * DHT11 Temperature and Humidity Module
-  * 10kΩ register x2
-  * 1kΩ register x3
-  * 10Ω register
-  * Potentiometer
-  * Passive Buzzer
-  * Red LED
-  * Green LED
-  * IR Reciever Module
-  * Button x2
+  * Arduino-compatible Elegoo UNO R3
+  * Mini Size Breadboard
+  * Photoresistor (for illuminance meter)
+  * DHT11 Temperature and Humidity Module (for thermometer and hygrometer)
+  * IR Reciever Module (for learning IR remote control codes of the lighting equipment)
+  * Passive Buzzer (for the notification sound)
+  * Potentiometer (for the volume of the Passive Buzzer)
+  * Red LED (for the power lamp)
+  * Green LED (for the IR reciever lamp)
+  * Button x2 (for Power switch and IR Reciever switch)
+  * 10kΩ resister x2 (for Button x2) 
+  * 1kΩ resister x3 (for LED x2 and Photoresistor)
+  * 10Ω resister (for a series of IR LED x3)
   * many jumper wires
-* [BreadBoard BB-801](https://akizukidenshi.com/catalog/g/g105294/) (Half+ Size)
-* [OSI5LA5A33A-B](https://akizukidenshi.com/catalog/g/g113204/) (IR LED) x3
+* Half+ Size BreadBoard [BB-801](https://akizukidenshi.com/catalog/g/g105294/)
+* IR LED [OSI5LA5A33A-B](https://akizukidenshi.com/catalog/g/g113204/) x3 (for control of the brightness of lighting equipment; not implemented yet)
 
 Installation
 ============
@@ -36,7 +36,7 @@ sudo apt install psmisc chromium-chromedriver gcc-avr avr-libc arduino-core-avr 
 2. Setup your Arduino Uno R3 like this (XXX: not safety-verified yet):
 ![Arduino Setup Image](gsclock_arduino_uno_sketch.png)
 
-3. Install the main script of gsclock and its dependencies via pip! The build starts automatically!
+3. Install the main script of gsclock and its dependencies via pip! The build also starts automatically!
 ```bash
 pip install git+https://github.com/nazodane/gsclock.git
 ```
