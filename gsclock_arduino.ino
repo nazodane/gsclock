@@ -26,8 +26,8 @@ const char *IR_CODE_NAMES[] = { "full light", "night light",  "light out", "ligh
 
 #define EEPROM_IR_START 4
 // EEPROM specification of the device:
-// EEPROM[  0..  4] = reserved (intended to specify EEPROM version like 'GS00' but not implemented yet)
-// EEPROM[  4..104] = LIGHTING FULL LIGHT RAW IR CODE (each element is compressed by (uint8_t)(code / MICROS_PER_TICK); I believe 50μs * 255 = 12.75ms is sufficient.)
+// EEPROM[  0..  4] = the EEPROM version like 'GS00'
+// EEPROM[  4..104] = LIGHTING FULL LIGHT RAW IR CODE (each element is compressed by (uint8_t)(code / MICROS_PER_TICK); 50μs * 255 = 12.75ms should be sufficient.)
 // EEPROM[104..204] = LIGHTING NIGHT LIGHT RAW IR CODE (ditto)
 // EEPROM[204..304] = LIGHTING LIGHT OUT RAW IR CODE (ditto)
 // EEPROM[304..404] = LIGHTING LIGHTER RAW IR CODE (ditto)
@@ -107,6 +107,21 @@ void setup() {
   pinMode(irLedPin, OUTPUT);
   IrSender.begin(irSendPin);
   print_power_change();
+
+  if (EEPROM.read(0) != 'G' || EEPROM.read(1) != 'S' ||
+      EEPROM.read(2) != '0' || EEPROM.read(3) != '0') { // EEPROM is not initialized
+      EEPROM.write(0, 'G');
+      EEPROM.write(1, 'S');
+      EEPROM.write(2, '0');
+      EEPROM.write(3, '0');
+      EEPROM.write(EEPROM_IR_START + RAW_BUFFER_LENGTH * 0, 0);
+      EEPROM.write(EEPROM_IR_START + RAW_BUFFER_LENGTH * 1, 0);
+      EEPROM.write(EEPROM_IR_START + RAW_BUFFER_LENGTH * 2, 0);
+      EEPROM.write(EEPROM_IR_START + RAW_BUFFER_LENGTH * 3, 0);
+      EEPROM.write(EEPROM_IR_START + RAW_BUFFER_LENGTH * 4, 0);
+      Serial.println("mesg: EEPROM initialized");
+  } else
+      Serial.println("mesg: EEPROM checked");
 }
 
 unsigned int rawbuf_for_send[RAW_BUFFER_LENGTH];
