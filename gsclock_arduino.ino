@@ -3,30 +3,35 @@ Copyright (C) 2024 Toshimitsu Kimura <lovesyao@gmail.com>
 SPDX-License-Identifier: Apache-2.0
 */
 
-#include "DHT-Sensors-Non-Blocking/DHT_Async.cpp"
-#include "Tone/Tone.h"
+#include "DHT-Sensors-Non-Blocking/DHT_Async.cpp" // for temperature and humidity
+
+#include "Tone/Tone.h" // for tone frequency defination
 
 #define IR_USE_AVR_TIMER1 // timer1 for ir recv and timer2 for tone
 #define RAW_BUFFER_LENGTH 100 // just in case
+#define MICROS_PER_TICK 50 // just in case
 #define NO_DECODER // just resend the raw data so the decoders are not needed
 #include "Arduino-IRremote/src/IRremote.hpp" // or IRMP?
-//#include <EEPROM.h> # save the IR remote control code for home lighting. lowest on/off/up/down?
 
+#include <EEPROM.h> // save the IR remote control code for home lighting. lowest on/off/up/down?
 
-// EEPROM[0..4] = GS00
-// EEPROM[5] = LIGHTING FULL LIGHT IR COMMAND SIZE
-// EEPROM[6] = LIGHTING NIGHT LIGHT IR COMMAND SIZE
-// EEPROM[7] = LIGHTING LIGHT OUT IR COMMAND SIZE
-// EEPROM[8] = LIGHTING LIGHTER IR COMMAND SIZE
-// EEPROM[9] = LIGHTING DARKER IR COMMAND SIZE
-// EEPROM[1023 - EEPROM[5]..1023] = LIGHTING FULL LIGHT IR COMMAND
-// EEPROM[1023 - sum(EEPROM[5..6])..1023 - EEPROM[5]] = LIGHTING NIGHT LIGHT IR COMMAND
-// EEPROM[1023 - sum(EEPROM[5..7])..1023 - sum(EEPROM[5..6])] = LIGHTING LIGHT OUT IR COMMAND
-// EEPROM[1023 - sum(EEPROM[5..8])..1023 - sum(EEPROM[5..7])] = LIGHTING LIGHTER IR COMMAND
-// EEPROM[1023 - sum(EEPROM[5..9])..1023 - sum(EEPROM[5..8])] = LIGHTING DARKER IR COMMAND
+const char *IR_CODE_NAMES[] = { "full light", "night light",  "light out", "lighter", "darker"};
+#define IR_CODE_LEN sizeof(IR_CODE_NAMES) / sizeof(IR_CODE_NAMES[0])
 
-const char *IR_COMMAND_NAMES[] = { "full light", "night light",  "light out", "lighter", "darker"};
-#define IR_COMMAND_LEN sizeof(IR_COMMAND_NAMES) / sizeof(IR_COMMAND_NAMES[0])
+#define IR_LIGHTING_FULL 0
+#define IR_LIGHTING_NIGHT 1
+#define IR_LIGHTING_OUT 3
+#define IR_LIGHTING_LIGHTER 4
+#define IR_LIGHTING_DARKER 5
+
+#define EEPROM_IR_START 4
+// EEPROM specification of the device:
+// EEPROM[  0..  4] = reserved (intended to specify EEPROM version like 'GS00' but not implemented yet)
+// EEPROM[  4..104] = LIGHTING FULL LIGHT RAW IR CODE (each element is compressed by (uint8_t)(code / MICROS_PER_TICK); I believe 50μs * 255 = 12.75ms is sufficient.)
+// EEPROM[104..204] = LIGHTING NIGHT LIGHT RAW IR CODE (ditto)
+// EEPROM[204..304] = LIGHTING LIGHT OUT RAW IR CODE (ditto)
+// EEPROM[304..404] = LIGHTING LIGHTER RAW IR CODE (ditto)
+// EEPROM[404..504] = LIGHTING DARKER RAW IR CODE (ditto)
 
 /*
 Unique code for gsclock
@@ -74,7 +79,7 @@ int currentIrButtonState = FALSE;
 bool currentWorkingState = TRUE;
 
 bool currentIrModeState = FALSE;
-size_t irWaintingCommand = 0;
+size_t irWaintingCode = 0;
 
 void print_power_change() {
   Serial.print("mesg: power ");
@@ -86,9 +91,9 @@ void print_irreceiver_change() {
   Serial.print(currentIrModeState?"on; waiting ":"off");
 
   if (currentIrModeState) {
-    Serial.print(IR_COMMAND_NAMES[irWaintingCommand]);
+    Serial.print(IR_CODE_NAMES[irWaintingCode]);
     Serial.println(" code...");
-  } else if (irWaintingCommand == IR_COMMAND_LEN - 1)
+  } else if (irWaintingCode == IR_CODE_LEN - 1)
     Serial.println("; the registration succeeded!");
   else
     Serial.println();
@@ -100,11 +105,33 @@ void setup() {
   pinMode(powerLedPin, OUTPUT);
   pinMode(irReceiveButtonPin, INPUT);
   pinMode(irLedPin, OUTPUT);
+  IrSender.begin(irSendPin);
   print_power_change();
 }
 
-
 unsigned int rawbuf_for_send[RAW_BUFFER_LENGTH];
+
+bool ir_send(int ir_code) {
+  if (currentIrModeState) return FALSE;
+  int i = 0;
+  for (; i < RAW_BUFFER_LENGTH; i++) {
+    int idx = EEPROM_IR_START + ir_code * RAW_BUFFER_LENGTH + i;
+    rawbuf_for_send[i] = (unsigned int)EEPROM.read(idx) * MICROS_PER_TICK;
+//    Serial.print(rawbuf_for_send[i]);
+//    Serial.print(", ");
+    if (rawbuf_for_send[i] == 0) {
+      i++;
+      break;
+    }
+  }
+//  Serial.println();
+//  Serial.println(i);
+  IrReceiver.begin(irReceivePin, ENABLE_LED_FEEDBACK); // XXX: for working, this is needed but why?
+  IrSender.sendRaw(rawbuf_for_send, i, MICROS_PER_TICK /*kHZ*/);
+  IrReceiver.stop();
+  return TRUE;
+}
+
 
 void loop() {
   int buttonState = digitalRead(powerButtonPin);
@@ -135,7 +162,7 @@ void loop() {
       digitalWrite(irLedPin, LOW);
     if (irButtonState == 2) { // irreceiver change print delay
       print_irreceiver_change();
-      irWaintingCommand = 0;
+      irWaintingCode = 0;
     }
   } else {
     digitalWrite(irLedPin, LOW); // LOW = 0.47V on Elegoo Uno R3 when VREF=5.06V
@@ -181,23 +208,23 @@ void loop() {
 
         tone(activeBuzzerPin, NOTE_C5, 1);
 
-        for (int i = 0; i < irdata->rawDataPtr->rawlen - 1; i++)
-            rawbuf_for_send[i] = irdata->rawDataPtr->rawbuf[i+1] * MICROS_PER_TICK;
-
-        rawbuf_for_send[irdata->rawDataPtr->rawlen - 1] = 0;
+        int i = 0;
+        for (; i < irdata->rawDataPtr->rawlen - 1; i++) {
+//            Serial.println(EEPROM_IR_START + RAW_BUFFER_LENGTH * irWaintingCode + i);
+            EEPROM.update(EEPROM_IR_START + RAW_BUFFER_LENGTH * irWaintingCode + i, irdata->rawDataPtr->rawbuf[i+1]); // see the comment of EEPROM specification of the device
+        }
+//        Serial.println(EEPROM_IR_START + RAW_BUFFER_LENGTH * irWaintingCode + i);
+        EEPROM.update(EEPROM_IR_START + RAW_BUFFER_LENGTH * irWaintingCode + i, 0);
 
         delay(1000);
-        if (irWaintingCommand < IR_COMMAND_LEN - 1) {
-            irWaintingCommand ++;
+        if (irWaintingCode < IR_CODE_LEN - 1) {
+            irWaintingCode ++;
             IrReceiver.resume();
         } else {
             currentIrModeState = FALSE;
             IrReceiver.stop();
         }
         print_irreceiver_change();
-
-//        delay(500);
-//        IrSender.sendRaw(rawbuf_for_send, irdata->rawDataPtr->rawlen, MICROS_PER_TICK / *kHZ* /);
     }
   }
   ir_end:
@@ -262,16 +289,18 @@ void loop() {
     Serial.println(actualRef5V);
 */
 
-// 送信するIRデータはEEPROMに保存する
-// LUX閾値もEEPROMに保存する
-
-
-
-// 人感センサー試す
 
     int praw = analogRead(photoresistorPin);
     Serial.print("praw: ");
     Serial.println(praw);
+
+// working but comment out for now
+/*
+    if (praw < 30) { // TODO: 人感センサーも有効にする、LUX閾値もEEPROMに保存する?
+         Serial.println("callled!");
+        ir_send(IR_LIGHTING_FULL);
+    }
+*/
 
     float temperature;
     float humidity;
