@@ -102,6 +102,8 @@ void print_irreceiver_change() {
 
 void setup() {
   Serial.begin(9600);
+  Serial.println("mesg: GSClock version 0.0; see https://github.com/nazodane/gsclock");
+
   pinMode(powerButtonPin, INPUT);
   pinMode(powerLedPin, OUTPUT);
   pinMode(irReceiveButtonPin, INPUT);
