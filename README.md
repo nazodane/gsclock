@@ -8,7 +8,8 @@ Requirements
   * Mini Size Breadboard
   * Photoresistor (for illuminance meter)
   * DHT11 Temperature and Humidity Module (for thermometer and hygrometer)
-  * IR Reciever Module (for learning IR remote control codes of the lighting equipment)
+  * IR Reciever Module (for learning IR remote control codes of lighting equipments)
+  * HC SR501 PIR (for human sensing in the automatic control of lighting equipments)
   * Passive Buzzer (for the notification sound)
   * Potentiometer (for the volume of the Passive Buzzer)
   * Red LED (for the power lamp)
@@ -19,7 +20,7 @@ Requirements
   * 10Ω resister (for a series of IR LED x3)
   * many jumper wires
 * Half+ Size BreadBoard [BB-801](https://akizukidenshi.com/catalog/g/g105294/)
-* IR LED [OSI5LA5A33A-B](https://akizukidenshi.com/catalog/g/g113204/) x3 (for control of the brightness of lighting equipment; not implemented yet)
+* IR LED [OSI5LA5A33A-B](https://akizukidenshi.com/catalog/g/g113204/) x3 (for emittering IR codes in the automatic control of lighting equipments)
 
 Installation
 ============

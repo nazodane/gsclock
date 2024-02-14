@@ -70,6 +70,7 @@ int irReceiveButtonPin = 10; //D10
 int irLedPin = 9; // D9
 int irReceivePin = 5;  // D5
 int irSendPin = 3; // D3
+int pirPin = 11; // D11
 int photoresistorPin = 0; // A0
 int direct3V3VoltagePin = 5;  // A5
 int currentButtonState = FALSE;
@@ -309,13 +310,15 @@ void loop() {
     Serial.print("praw: ");
     Serial.println(praw);
 
-// working but comment out for now
-/*
-    if (praw < 30) { // TODO: 人感センサーも有効にする、LUX閾値もEEPROMに保存する?
+    int pirValue = digitalRead(pirPin);
+    Serial.print("pir: "); // don't do four letter
+    Serial.println(pirValue);
+
+    if (pirValue && praw < 30) { // TODO: LUX閾値もEEPROMに保存する?
          Serial.println("callled!");
         ir_send(IR_LIGHTING_FULL);
     }
-*/
+
 
     float temperature;
     float humidity;
