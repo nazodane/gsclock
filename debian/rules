@@ -1,0 +1,7 @@
+#!/usr/bin/make -f
+%:
+	dh $@
+
+override_dh_usrlocal: # for preventing "dh_usrlocal: error: debian/gsclock/usr/local/bin/gsclock is not a directory"
+	
+

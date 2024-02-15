@@ -1,4 +1,4 @@
-# gsclock.py, gsclock.html, styles/analog_rich.css
+# gsclock, gsclock.html, styles/analog_rich.css, Makefile, setup.py
 Copyright (C) 2024 Toshimitsu Kimura <lovesyao@gmail.com>
 
 All rights reserved.
@@ -30,7 +30,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-# gsclock_arduino/gsclock_arduino.ino
+# gsclock_arduino.ino
 Copyright (C) 2024 Toshimitsu Kimura <lovesyao@gmail.com>
 Copyright (C) 2023 Toan Nguyen
 
@@ -368,7 +368,7 @@ express Statement of Purpose.
     Work.
  d. Affirmer understands and acknowledges that Creative Commons is n
 
-# sp-setofont.ttf (瀬戸フォント-SP)
+# styles/sp-setofont.ttf (瀬戸フォント-SP)
 The font is borrowed from: https://ja.osdn.net/projects/setofont/
 
 Copyright (C) 2014 かにさわ (https://ja.osdn.net/users/twinklem_seto/)

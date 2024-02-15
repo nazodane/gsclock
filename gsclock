@@ -109,6 +109,10 @@ if __name__ == '__main__':
     html_path = "%s/gsclock.html"%(os.path.dirname(__file__))
     print(os.path.dirname(__file__))
     if not os.path.exists(html_path):
+        html_path = expanduser("~") + "/usr/share/gsclock/gsclock.html"
+    if not os.path.exists(html_path):
+        html_path = expanduser("~") + "/usr/local/share/gsclock/gsclock.html"
+    if not os.path.exists(html_path):
         html_path = expanduser("~") + "/.local/share/gsclock/gsclock.html"
     if not os.path.exists(html_path):
         print("FAILED: no gsclock.html found...")

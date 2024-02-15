@@ -1,0 +1,35 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: gsclock
+Upstream-Contact: Toshimitsu Kimura <lovesyao@gmail.com>
+
+Files: gsclock gsclock.html styles/analog_rich.css, Makefile, setup.py
+Copyright: 2024 Toshimitsu Kimura <lovesyao@gmail.com>
+License: BSD-3-clause
+
+Files: gsclock_arduino.ino
+Copyright: 2024 Toshimitsu Kimura <lovesyao@gmail.com>
+Copyright: 2023 Toan Nguyen
+License: Apache-2.0
+
+Files: styles/*.jpg
+Copyright: Rawpixel Ltd.
+License: CC-0
+Comment: https://www.rawpixel.com/services/user-terms/public-domain
+
+Files: styles/sp-setofont.ttf
+Copyright: かにさわ (https://ja.osdn.net/users/twinklem_seto/)
+License: OFL-1.1
+
+Files: Tone/*
+Copyright: 2016 Brett Hagman
+License: MIT
+
+Files: Arduino-IRremote/*
+Copyright: 2009 Ken Shirriff http://www.righto.com
+Copyright: 2016 Rafi Khan
+Copyright: 2020-2022 Armin Joachimsmeyer et al.
+License: MIT
+
+Files: DHT-Sensors-Non-Blocking/*
+Copyright: 2023 Toan Nguyen
+License: Apache-2.0

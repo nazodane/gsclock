@@ -1,0 +1,15 @@
+Source: gsclock
+Section: utils
+Priority: extra
+Standards-Version: 0.1.1
+Maintainer: costales <costales.marcos@gmail.com>
+Build-Depends: debhelper (>= 8.0.0), gcc-avr, avr-libc, arduino-core-avr
+Homepage: https://github.com/nazodane/gsclock
+
+Package: gsclock
+Architecture: all
+Section: utils
+Priority: extra
+Depends: python3, python3-screeninfo, python3-serial, python3-pyudev, python3-selenium, pip, wmctrl, psmisc, chromium-chromedriver, avrdude, ${python:Depends}
+Description: The Good-shaped Clock; a virtual analog clock with Arduino's sensor data
+## XXX: python3-wmctrl is not packaged in Debian. Should I install wmctrl.py via pip or add wmctrl.py via git submodules?
