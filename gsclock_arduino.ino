@@ -164,16 +164,16 @@ void pdm_play(uint8_t pin, uint8_t val)
   uint8_t timer = digitalPinToTimer(pin);
   if (timer != NOT_ON_TIMER) return; // when pin is PWM
 
-  uint8_t bit = digitalPinToBitMask(pin);
-  volatile uint8_t *out;
+//  uint8_t bit = digitalPinToBitMask(pin);
 
+  volatile uint8_t *out;
   out = portOutputRegister(port);
 
   uint8_t flags;
   saveInterrupts(flags); // save interrupt state and interrupt off; no timer, no PWM, no external interrupts are intended.
   // https://arduino.stackexchange.com/questions/61567/what-functions-are-disabled-with-nointerrupts
 
-  uint8_t low = *out & ~bit, high = *out | bit;
+//  uint8_t low = *out & ~bit, high = *out | bit;
 
 
   // https://docs.arduino.cc/retired/hacking/software/PortManipulation/
@@ -192,8 +192,13 @@ void pdm_play(uint8_t pin, uint8_t val)
   }
   */
 
+/*
   // XXX: PORTD (D0 - D7) should be safe but PORTB has crystal inputs (6-7) and I don't know it's safe.
   if (out != &DDRD) return;
+*/
+# define PDM_PIN 7
+  if (pin != PDM_PIN) return;
+  uint8_t out_new = *out;
 
   // DSD is 2.8224MHz but Arduino Uno R3 is 16MHz so 16MHz/5clk = 3.2Mhz (or 16MHz/5.5clk = 2.909Mhz) is the target.
   // lds UDR0 (2clk) -> andi (1clk) -> brne (0.5clk) -> out DDRD (1clk) -> breq/brne (0.5clk) = 5clk? really? and how can I exit the loop?
@@ -205,53 +210,42 @@ void pdm_play(uint8_t pin, uint8_t val)
 
      uint8_t t;
 
-#    define asm_loop(x) "	bst %[temp], " #x "\n" /* 1clk */\
-                        "	brtc true" #x "\n" /*0.5clk*/\
-                        "	out %[ddrd], %[high]\n" /*1clk*/\
-                        "	brts end" #x "\n" /*0.5clk*/ \
-                        "true" #x ":\n" \
-                        "	out %[ddrd], %[low]\n" /*1clk; note: ST is 2clk*/ \
-                        "	brtc end" #x "\n" /*0.5clk; note: nop on x=1..64 */
+#    define asm_loop(x, pin) "	bst %[temp], " #x "\n" /* 1clk */\
+                        "	bld %[out_new], " #pin "\n" /* 1clk */\
+                        "	out %[ddrd], %[out_new]\n" /*1clk*/\
 
-     // XXX: using bld op instead of brts op loses 0.5clk on x=7.
-
-#    define asm_loop_end(x) "end" #x ":\n"
 
      // read serial port from UDR0 without intterupts
      asm volatile (
-                   asm_loop_end(7)
                    "	lds %[temp], %[udr]\n" /* 2clk; note: "in" op is not usable here because UDR0 is not an I/O register.*/
-                   asm_loop(0)
-                   asm_loop_end(0)
+                   asm_loop(0, 7/*PDM_PIN*/)
                    "	nop\n" // XXX: should implement to exit the loop
                    "	nop\n"
-                   asm_loop(1)
-                   asm_loop_end(1)
+                   "pdm_loop:"
+                   asm_loop(1, 7/*PDM_PIN*/)
                    "	nop\n"
                    "	nop\n"
-                   asm_loop(2)
-                   asm_loop_end(2)
+                   asm_loop(2, 7/*PDM_PIN*/)
                    "	nop\n"
                    "	nop\n"
-                   asm_loop(3)
-                   asm_loop_end(3)
+                   asm_loop(3, 7/*PDM_PIN*/)
                    "	nop\n"
                    "	nop\n"
-                   asm_loop(4)
-                   asm_loop_end(4)
+                   asm_loop(4, 7/*PDM_PIN*/)
                    "	nop\n"
                    "	nop\n"
-                   asm_loop(5)
-                   asm_loop_end(5)
+                   asm_loop(5, 7/*PDM_PIN*/)
                    "	nop\n"
                    "	nop\n"
-                   asm_loop(6)
-                   asm_loop_end(6)
+                   asm_loop(6, 7/*PDM_PIN*/)
                    "	nop\n"
                    "	nop\n"
-                   asm_loop(7)
-                   : [temp] "+r" (t)
-                   : [high] "r" (high), [low] "r" (low), [udr] "X" (UDR0), [ddrd] "M" (_SFR_IO_ADDR(DDRD /*PORTD*/ ))
+                   asm_loop(7, 7/*PDM_PIN*/)
+                   "	lds %[temp], %[udr]\n" /* 2clk */
+                   asm_loop(0, 7/*PDM_PIN*/)
+                   "	rjmp pdm_loop\n"  /* 2clk */
+                   : [temp] "+r" (t), [out_new] "+r" (out_new)
+                   : [udr] "X" (UDR0), [ddrd] "M" (_SFR_IO_ADDR(DDRD /*PORTD*/ ))
     );
 
   // lpf: https://elvistkf.wordpress.com/2016/04/19/arduino-implementation-of-filters/
