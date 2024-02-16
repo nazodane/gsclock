@@ -150,6 +150,101 @@ bool ir_send(int ir_code) {
   return TRUE;
 }
 
+#if 0
+
+#define saveInterrupts(flags) { flags = SREG; noInterrupts(); };
+#define restoreInterrupts(flags) { SREG = flags; };
+
+// XXX: Not tested at all; I should find the method to exit the loop. (maybe using intterupt?)
+__attribute__((used))
+void pdm_play(uint8_t pin, uint8_t val)
+{
+  uint8_t port = digitalPinToPort(pin);
+  if (port == NOT_A_PIN) return;
+
+  uint8_t timer = digitalPinToTimer(pin);
+  if (timer != NOT_ON_TIMER) return; // when pin is PWM
+
+  uint8_t bit = digitalPinToBitMask(pin);
+  volatile uint8_t *out;
+
+  out = portOutputRegister(port);
+
+  uint8_t flags;
+  saveInterrupts(flags); // save interrupt state and interrupt off; no timer, no PWM, no external interrupts are intended.
+  // https://arduino.stackexchange.com/questions/61567/what-functions-are-disabled-with-nointerrupts
+
+  uint8_t low = *out & ~bit, high = *out | bit;
+
+
+  // https://docs.arduino.cc/retired/hacking/software/PortManipulation/
+  /*
+  // for debug
+  if (out == &DDRD) {
+    if (val == LOW) {
+     asm volatile ("nop": "+r" (low));
+      DDRD = low;
+      __builtin_avr_delay_cycles(1);
+    } else {
+     asm volatile ("nop": "+r" (high));
+      DDRD = high;
+      __builtin_avr_delay_cycles(1);
+    }
+  }
+  */
+
+  // XXX: PORTD (D0 - D7) should be safe but PORTB has crystal inputs (6-7) and I don't know it's safe.
+  if (out != &DDRD) return;
+
+  // DSD is 2.8224MHz but Arduino Uno R3 is 16MHz so 16MHz/5clk = 3.2Mhz (or 16MHz/5.5clk = 2.909Mhz) is the target.
+  // lds UDR0 (2clk) -> andi (1clk) -> brne (0.5clk) -> out DDRD (1clk) -> breq/brne (0.5clk) = 5clk? really? and how can I exit the loop?
+  // The serial port baud rate is 400,000Hz but it should be ok: https://forum.arduino.cc/t/set-arduino-serial-baud-rate-above-115200-230400-256000-307200-614400/96235/9
+
+  // avr asm sim: https://jonopriestley.github.io/avrsim/
+
+     uint8_t t;
+
+#    define asm_loop(x) "	lds %[temp], %[udr]\n" /* 2clk; note: "in" op is not usable here because UDR0 is not an I/O register.*/\
+                        "	andi %[temp], " #x "\n" /* 1clk */\
+                        "	brne true" #x "\n" /*0.5clk*/\
+                        "	out %[ddrd], %[high]\n" /*1clk*/\
+                        "	breq end" #x "\n" /*0.5clk*/ \
+                        "true" #x ":\n" \
+                        "	out %[ddrd], %[low]\n" /*1clk; note: ST is 2clk*/ \
+                        "	brne end" #x "\n" /*0.5clk; note: nop on x=1..64 */
+#    define asm_loop_end(x) "end" #x ":\n"
+
+     // read serial port from UDR0 without intterupts
+     asm volatile (
+                   asm_loop_end(128)
+                   asm_loop(1)
+                   asm_loop_end(1)
+                   asm_loop(2)
+                   asm_loop_end(2)
+                   asm_loop(4)
+                   asm_loop_end(4)
+                   asm_loop(8)
+                   asm_loop_end(8)
+                   asm_loop(16)
+                   asm_loop_end(16)
+                   asm_loop(32)
+                   asm_loop_end(32)
+                   asm_loop(64)
+                   asm_loop_end(64)
+                   asm_loop(128)
+                   : [temp] "+r" (t)
+                   : [high] "r" (high), [low] "r" (low), [udr] "X" (UDR0), [ddrd] "M" (_SFR_IO_ADDR(DDRD /*PORTD*/ ))
+    );
+
+  // lpf: https://elvistkf.wordpress.com/2016/04/19/arduino-implementation-of-filters/
+
+  // __builtin_avr_delay_cycles
+
+  restoreInterrupts(flags); // restore interrupt state
+}
+
+#endif
+
 
 void loop() {
   int buttonState = digitalRead(powerButtonPin);
