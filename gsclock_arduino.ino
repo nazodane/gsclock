@@ -184,8 +184,24 @@ void pdm_playback_on_pin6()
 
   Serial.println("mesg: PDM playback ready!");
 
+
+  //https://forum.arduino.cc/t/change-baud-rate-at-runtime/368191/2
+  Serial.flush();
+  Serial.begin(400000);
+  while(Serial.available()) Serial.read();
+
   saveInterrupts(flags); // save interrupt state and interrupt off; no timer, no PWM, no external interrupts are intended.
   // https://arduino.stackexchange.com/questions/61567/what-functions-are-disabled-with-nointerrupts
+
+
+  UCSR0B &= ~RXCIE0;
+  // http://www.rjhcoding.com/avrc-uart.php
+  // https://garretlab.web.fc2.com/arduino/inside/hardware/arduino/avr/cores/arduino/HardwareSerial.cpp/begin.html
+
+  /*
+  UBRR0L = 2; // (16000000/(16*400,000)) - 1 = 1.5 or (16000000 / 8 / 400,000 - 1) / 2 = 2 ???
+  UBRR0H = 0;
+  */
 
   uint8_t out_new = *out;
 
@@ -211,6 +227,7 @@ void pdm_playback_on_pin6()
 
 
      // read serial port value from UDR0 without intterupts
+     // TODO: detect stop bits?
      asm volatile (
                    "	lds %[temp], %[udr]\n" /* 2clk; note: "in" op is not usable here because UDR0 is not an I/O register.*/
                    out_from_bit(0, 6/*PDM_PIN*/)
@@ -248,7 +265,17 @@ void pdm_playback_on_pin6()
 
   // __builtin_avr_delay_cycles
 
+/*
+  UBRR0L = 0x67; // XXX: we shold recover previous rate
+  UBRR0H = 0;
+*/
+  UCSR0B |= RXCIE0;
   restoreInterrupts(flags); // restore interrupt state
+  Serial.flush();
+  Serial.begin(9600);
+  while(Serial.available()) Serial.read();
+
+  Serial.println("mesg: recover from PDM playback!");
 }
 
 void loop() {

@@ -60,19 +60,19 @@ def connect_to_arduino():
       try:
         print("checking the serial port %s..."%(port))
         pids = find_processes_using_dev(port)
-        if len(pids): # if the port is used, we shouldn't steal the input of the port.
+        if pids and len(pids): # if the port is used, we shouldn't steal the input of the port.
             print("used by pids %s so skipping the serial port %s..."%(pids, port))
             # if the serial number is in whitelist, use this anyways. -> not implemented
             # os.system("fuser -k %s"%(port))
             count = 0
             continue
         print("connecting %s..."%(port))
-        arduino = serial.Serial(port, 9600, timeout=1, writeTimeout=False)
+        arduino = serial.Serial(port, 9600, timeout=1, writeTimeout=0) #, rtscts=False, dsrdtr=False
         arduino.flush()
         arduino.read_until().decode('utf-8').rstrip() # drop the garbage input
         first_line = arduino.read_until().decode('utf-8').rstrip()
-        print(line)
-        if first_line.startswith(("praw:", "temp:", "humi:", "mesg:")):
+        print(first_line)
+        if first_line.startswith(("praw:", "temp:", "humi:", "mesg:", "pir:")):
           break
         arduino.close()
         arduino = None
@@ -82,8 +82,8 @@ def connect_to_arduino():
         if arduino:
           arduino.close()
         exit()
-      except:
-        print("WARNING: error to connect the arduino serial, retrying...")
+      except Exception as e:
+        print("WARNING: error to connect the arduino serial (%s), retrying..."%(e))
 
   if not arduino:
     print("FAILED: no arduino serial port found!")
@@ -142,7 +142,7 @@ if __name__ == '__main__':
     arduino, line = connect_to_arduino()
 
     def process_line(line):
-        if (len(line) > 6 and line[4] == ':'):
+        if (line and len(line) > 6 and line[4] == ':'):
             elm = driver.find_element(By.ID, line[0:4])
             driver.execute_script("arguments[0].innerText = arguments[1]", elm, line[6:])
     
@@ -166,7 +166,7 @@ if __name__ == '__main__':
             """
             # DSD playback test
             print("QUERY: PDM playback via serial console")
-            with open("/media/nazo/99b6c642-e66e-487f-a871-78b86fa15fd51/_/pdm_test.dsf", mode='rb') as f:
+            with open("/media/nazo/99b6c642-e66e-487f-a871-78b86fa15fd51/_/beep-03.dsf", mode='rb') as f:
                 d = f.read()
                 # DSF specfication: https://dsd-guide.com/sites/default/files/white-papers/DSFFileFormatSpec_E.pdf
                 if d[0:4] != b"DSD " or d[0x3c] != 1 or d[0x50:0x54] != b"data":
@@ -175,7 +175,8 @@ if __name__ == '__main__':
                 print("DSF file recognized! size=%s"%(dsf_size))
 
                 print("Send the command for PDM playback to the device!")
-                while True:
+                ok = False
+                for i in range(10):
                     arduino.write(b"a");
                     arduino.flush();
                     line = arduino.read_until().decode('utf-8').rstrip()
@@ -184,20 +185,62 @@ if __name__ == '__main__':
                     if line != "mesg: PDM playback ready!":
 #                        print("FAILED: the device responded wrong message...")
                         continue
+                    ok = True
                     break
+                if not ok:
+                    line = arduino.read_until().decode('utf-8').rstrip()
+                    print(line)
+                    continue
 
-                print("DSF data sending start!")
+                old_baudrate = arduino.baudrate
+#                arduino.flush()
                 arduino.baudrate = 400000; # 400kHz
 #                sleep(0.001);
                 ns = None
-                for x in d[0x5c:0x5c + dsf_size]: # not working... at least this is too slow
-                    ns = time_ns()
-                    arduino.write(x);
-#                    arduino.flushOutput();
-                    ns_diff = time_ns() - ns
-#                    if ns_diff > 2500: # 1s / 400kHz
-#                        print("overrun %s"%(ns_diff));
-                print("SUCCESS: DSF data sending done!")
+                fd = arduino.fd
+                print("DSF data sending start on fd: %s!"%(fd))
+
+                from ctypes import *
+                libc = CDLL("libc.so.6")
+#                c_buf = (c_uint8 * dsf_size)(*d[0x5c:0x5c+dsf_size])
+#                x = 0;
+#                while x < dsf_size:
+#                    libc.write(fd, cast(c_char_p(c_buf),POINTER(c_ubyte)), 1)
+
+
+#                
+# XXX: this method has scheduling problem
+#                x = 0x5c;
+#                while x < 0x5c + dsf_size: # not working... at least this is too slow
+##                    ns = time_ns()
+#                    libc.write(fd, (c_uint8 * 1)(*d[x:x+1]), 1)
+
+##                    arduino.write(d[x:x+1]);
+##                    arduino.flushOutput();
+
+##                    ns_diff = time_ns() - ns
+##                    if ns_diff > 2500: # 1s / 400kHz
+##                        print("overrun %s"%(ns_diff));
+#
+
+
+
+#                data_to_write = d[0x5c:0x5c + dsf_size]
+#                print(len(data_to_write))
+#                os.writev(fd, [data_to_write])
+
+                libc.write(fd, d[0x5c:0x5c+dsf_size], dsf_size)
+
+
+#                arduino.write(d[0x5c:0x5c+dsf_size])
+
+#                arduino.flush()
+                arduino.baudrate = old_baudrate
+#                arduino.write(b"0");
+                print("DSF data sending done!")
+                line = arduino.read_until().decode('utf-8').rstrip()
+                print(line)
+                print("SUCCESS: DSF playback done!")
                 exit()
 """
 
@@ -206,7 +249,8 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             print("Keybord interrupt, exiting...")
             exit()
-        except:
+        except Exception as e:
+            print(e)
             # reconnect to arduino
             if arduino:
                 arduino.close()
