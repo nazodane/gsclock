@@ -65,7 +65,7 @@ static bool measure_environment(float *temperature, float *humidity) {
 
 int powerButtonPin = 2; // D2
 int powerLedPin = 4; // D4
-int activeBuzzerPin = 8; //D8
+int activeBuzzerPin = 6; //D6
 int irReceiveButtonPin = 10; //D10
 int irLedPin = 9; // D9
 int irReceivePin = 5;  // D5
@@ -109,6 +109,7 @@ void setup() {
   pinMode(irReceiveButtonPin, INPUT);
   pinMode(irLedPin, OUTPUT);
   IrSender.begin(irSendPin);
+  pinMode(activeBuzzerPin, OUTPUT);
   print_power_change();
 
   if (EEPROM.read(0) != 'G' || EEPROM.read(1) != 'S' ||
@@ -150,19 +151,22 @@ bool ir_send(int ir_code) {
   return TRUE;
 }
 
-#if 0
+
 #define saveInterrupts(flags) { flags = SREG; noInterrupts(); };
 #define restoreInterrupts(flags) { SREG = flags; };
 
 // XXX: Not tested at all
-__attribute__((used))
-void pdm_play(uint8_t pin, uint8_t val)
+void pdm_playback_on_pin6()
 {
+# define PDM_PIN 6
+  uint8_t pin = PDM_PIN;
+
   uint8_t port = digitalPinToPort(pin);
   if (port == NOT_A_PIN) return;
 
   uint8_t timer = digitalPinToTimer(pin);
-  if (timer != NOT_ON_TIMER) return; // when pin is PWM
+  if (timer != NOT_ON_TIMER) // when pin has PWM timer
+    digitalWrite(PDM_PIN, LOW); // disable PWM timer
 
 //  uint8_t bit = digitalPinToBitMask(pin);
 
@@ -170,84 +174,74 @@ void pdm_play(uint8_t pin, uint8_t val)
   out = portOutputRegister(port);
 
   uint8_t flags;
+
+  // XXX: PORTD (D0 - D7) should be safe but PORTB has crystal inputs (6-7) and I don't know it's safe.
+  // https://docs.arduino.cc/retired/hacking/software/PortManipulation/
+  if (out != &PORTD) return;
+
+  uint8_t temp, zero = 0, cnt_low = 0, cnt_mid = 0, cnt_high = 0;
+  uint8_t step = 1; // the duration time is 1s / (16MHz / (40clk * ((2**8)**3)) / step) = 41.94304s / step
+
+  Serial.println("mesg: PDM playback ready!");
+
   saveInterrupts(flags); // save interrupt state and interrupt off; no timer, no PWM, no external interrupts are intended.
   // https://arduino.stackexchange.com/questions/61567/what-functions-are-disabled-with-nointerrupts
 
-//  uint8_t low = *out & ~bit, high = *out | bit;
-
-
-  // https://docs.arduino.cc/retired/hacking/software/PortManipulation/
-  /*
-  // for debug
-  if (out == &DDRD) {
-    if (val == LOW) {
-     asm volatile ("nop": "+r" (low));
-      DDRD = low;
-      __builtin_avr_delay_cycles(1);
-    } else {
-     asm volatile ("nop": "+r" (high));
-      DDRD = high;
-      __builtin_avr_delay_cycles(1);
-    }
-  }
-  */
-
-/*
-  // XXX: PORTD (D0 - D7) should be safe but PORTB has crystal inputs (6-7) and I don't know it's safe.
-  if (out != &DDRD) return;
-*/
-# define PDM_PIN 7
-  if (pin != PDM_PIN) return;
   uint8_t out_new = *out;
 
   // DSD is 2.8224MHz but Arduino Uno R3 is 16MHz so 16MHz/5clk = 3.2Mhz is the target.
   // The serial port baud rate is 400,000Hz but it should be ok: https://forum.arduino.cc/t/set-arduino-serial-baud-rate-above-115200-230400-256000-307200-614400/96235/9
+
+  // *** How to create the non-standard 3.2Mhz pdm sound file ***
+  // based on https://archimago.blogspot.com/2021/10/measurements-look-at-dsd-and-using-sox.html
+  // $ git clone https://github.com/mansr/sox/tree/master
+  // $ cd sox
+  // $ autoreconf -ivf && ./configure && make -j8
+  // $ sudo make install
+  // $ LD_LIBRARY_PATH=/usr/local/lib sox pdm_test.wav pdm_test.dsf rate -v 32000000 sdm -f sdm-8
 
   // Note: longest 16-bit timer (timer1) interrupt is 1s * (16,000,000 / ((2**16) * 1024)) = 238 ms so not enough.
 
   // avr asm sim: https://jonopriestley.github.io/avrsim/
   // avr ops: https://www.cs.shinshu-u.ac.jp/~haeiwa/m-com/instruction.html
 
-     uint8_t temp, zero = 0, cnt_low = 0, cnt_mid = 0, cnt_high = 0;
-     uint8_t step = 1; // the duration time is 1s / (16MHz / (40clk * ((2**8)**3)) / step) = 41.94304s / step
-
-#    define asm_loop(x, pin) "	bst %[temp], " #x "\n" /* 1clk */\
+#    define out_from_bit(x, pin) "	bst %[temp], " #x "\n" /* 1clk */\
                         "	bld %[out_new], " #pin "\n" /* 1clk */\
-                        "	out %[ddrd], %[out_new]\n" /*1clk*/\
+                        "	out %[portd], %[out_new]\n" /*1clk*/\
 
 
-     // read serial port from UDR0 without intterupts
+     // read serial port value from UDR0 without intterupts
      asm volatile (
                    "	lds %[temp], %[udr]\n" /* 2clk; note: "in" op is not usable here because UDR0 is not an I/O register.*/
-                   asm_loop(0, 7/*PDM_PIN*/)
+                   out_from_bit(0, 6/*PDM_PIN*/)
                    "	nop\n"
                    "	nop\n"
                    "pdm_loop:"
-                   asm_loop(1, 7/*PDM_PIN*/)
+                   out_from_bit(1, 6/*PDM_PIN*/)
                    "	add %[cnt_low], %[step]\n"
                    "	adc %[cnt_mid], %[zero]\n"
-                   asm_loop(2, 7/*PDM_PIN*/)
+                   out_from_bit(2, 6/*PDM_PIN*/)
                    "	adc %[cnt_high], %[zero]\n"
                    "	nop\n"
-                   asm_loop(3, 7/*PDM_PIN*/)
+                   out_from_bit(3, 6/*PDM_PIN*/)
                    "	nop\n"
                    "	nop\n"
-                   asm_loop(4, 7/*PDM_PIN*/)
+                   out_from_bit(4, 6/*PDM_PIN*/)
                    "	nop\n"
                    "	nop\n"
-                   asm_loop(5, 7/*PDM_PIN*/)
+                   out_from_bit(5, 6/*PDM_PIN*/)
                    "	nop\n"
                    "	nop\n"
-                   asm_loop(6, 7/*PDM_PIN*/)
+                   out_from_bit(6, 6/*PDM_PIN*/)
                    "	nop\n"
                    "	nop\n"
-                   asm_loop(7, 7/*PDM_PIN*/)
+                   out_from_bit(7, 6/*PDM_PIN*/)
                    "	lds %[temp], %[udr]\n" /* 2clk */
-                   asm_loop(0, 7/*PDM_PIN*/)
+                   out_from_bit(0, 6/*PDM_PIN*/)
                    "	brcc pdm_loop\n"  /* 2clk on true*/
                    : [temp] "+r" (temp), [out_new] "+r" (out_new), 
                      [cnt_low] "+r" (cnt_low), [cnt_mid] "+r" (cnt_mid), [cnt_high] "+r" (cnt_high)
-                   : [udr] "X" (UDR0), [ddrd] "M" (_SFR_IO_ADDR(DDRD /*PORTD*/ )), [zero] "r" (zero), [step] "r" (step)
+                   : [udr] "X" (UDR0), [portd] "M" (_SFR_IO_ADDR(PORTD)), [zero] "r" (zero), [step] "r" (step)
     );
 
   // lpf: https://elvistkf.wordpress.com/2016/04/19/arduino-implementation-of-filters/
@@ -256,7 +250,6 @@ void pdm_play(uint8_t pin, uint8_t val)
 
   restoreInterrupts(flags); // restore interrupt state
 }
-#endif
 
 void loop() {
   int buttonState = digitalRead(powerButtonPin);
@@ -299,7 +292,6 @@ void loop() {
   }
   if (buttonState == 2) // power change print delay
     print_power_change();
-
 
 /*
   // print out the state of the button
@@ -356,6 +348,11 @@ void loop() {
 
 
   if (currentWorkingState) {
+    if (Serial.available() > 0) {
+      int cmd = Serial.read();
+      if (cmd == 'a')
+        pdm_playback_on_pin6();
+    }
 
 
 // 音楽を変えられるようにする？ EEPROMに保存する？ならす時間もEEPROMに保存する？デジタル時刻表示も欲しくなるけど過剰、かなぁ。

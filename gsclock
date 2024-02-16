@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # Copyright (C) 2024 Toshimitsu Kimura <lovesyao@gmail.com>
 # SPDX-License-Identifier: BSD-3-Clause
-from time import sleep
+from time import sleep, time_ns
 import os
 from os.path import expanduser
 
@@ -67,7 +67,7 @@ def connect_to_arduino():
             count = 0
             continue
         print("connecting %s..."%(port))
-        arduino = serial.Serial(port, 9600, timeout=1)
+        arduino = serial.Serial(port, 9600, timeout=1, writeTimeout=False)
         arduino.flush()
         arduino.read_until().decode('utf-8').rstrip() # drop the garbage input
         first_line = arduino.read_until().decode('utf-8').rstrip()
@@ -141,6 +141,12 @@ if __name__ == '__main__':
 
     arduino, line = connect_to_arduino()
 
+    def process_line(line):
+        if (len(line) > 6 and line[4] == ':'):
+            elm = driver.find_element(By.ID, line[0:4])
+            driver.execute_script("arguments[0].innerText = arguments[1]", elm, line[6:])
+    
+
     while True:
         if not arduino:
             sleep(1)
@@ -155,9 +161,46 @@ if __name__ == '__main__':
 
         try:
 #            line = arduino.readline().decode('utf-8').rstrip()
-            if (len(line) > 6 and line[4] == ':'):
-                elm = driver.find_element(By.ID, line[0:4])
-                driver.execute_script("arguments[0].innerText = arguments[1]", elm, line[6:])
+            process_line(line)
+
+            """
+            # DSD playback test
+            print("QUERY: PDM playback via serial console")
+            with open("/media/nazo/99b6c642-e66e-487f-a871-78b86fa15fd51/_/pdm_test.dsf", mode='rb') as f:
+                d = f.read()
+                # DSF specfication: https://dsd-guide.com/sites/default/files/white-papers/DSFFileFormatSpec_E.pdf
+                if d[0:4] != b"DSD " or d[0x3c] != 1 or d[0x50:0x54] != b"data":
+                   exit()
+                dsf_size = int.from_bytes(d[0x54:0x5c], byteorder='little') - 12
+                print("DSF file recognized! size=%s"%(dsf_size))
+
+                print("Send the command for PDM playback to the device!")
+                while True:
+                    arduino.write(b"a");
+                    arduino.flush();
+                    line = arduino.read_until().decode('utf-8').rstrip()
+                    print(line)
+                    process_line(line)
+                    if line != "mesg: PDM playback ready!":
+#                        print("FAILED: the device responded wrong message...")
+                        continue
+                    break
+
+                print("DSF data sending start!")
+                arduino.baudrate = 400000; # 400kHz
+#                sleep(0.001);
+                ns = None
+                for x in d[0x5c:0x5c + dsf_size]: # not working... at least this is too slow
+                    ns = time_ns()
+                    arduino.write(x);
+#                    arduino.flushOutput();
+                    ns_diff = time_ns() - ns
+#                    if ns_diff > 2500: # 1s / 400kHz
+#                        print("overrun %s"%(ns_diff));
+                print("SUCCESS: DSF data sending done!")
+                exit()
+"""
+
             line = arduino.read_until().decode('utf-8').rstrip()
             print(line)
         except KeyboardInterrupt:
