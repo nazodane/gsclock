@@ -151,11 +151,10 @@ bool ir_send(int ir_code) {
 }
 
 #if 0
-
 #define saveInterrupts(flags) { flags = SREG; noInterrupts(); };
 #define restoreInterrupts(flags) { SREG = flags; };
 
-// XXX: Not tested at all; I should find the method to exit the loop. (maybe using intterupt?)
+// XXX: Not tested at all
 __attribute__((used))
 void pdm_play(uint8_t pin, uint8_t val)
 {
@@ -200,38 +199,57 @@ void pdm_play(uint8_t pin, uint8_t val)
   // lds UDR0 (2clk) -> andi (1clk) -> brne (0.5clk) -> out DDRD (1clk) -> breq/brne (0.5clk) = 5clk? really? and how can I exit the loop?
   // The serial port baud rate is 400,000Hz but it should be ok: https://forum.arduino.cc/t/set-arduino-serial-baud-rate-above-115200-230400-256000-307200-614400/96235/9
 
+  // Note: longest 16-bit timer (timer1) interrupt is 1s * (16,000,000 / ((2**16) * 1024)) = 238 ms so not enough.
+
   // avr asm sim: https://jonopriestley.github.io/avrsim/
 
      uint8_t t;
 
-#    define asm_loop(x) "	lds %[temp], %[udr]\n" /* 2clk; note: "in" op is not usable here because UDR0 is not an I/O register.*/\
-                        "	andi %[temp], " #x "\n" /* 1clk */\
-                        "	brne true" #x "\n" /*0.5clk*/\
+#    define asm_loop(x) "	bst %[temp], " #x "\n" /* 1clk */\
+                        "	brtc true" #x "\n" /*0.5clk*/\
                         "	out %[ddrd], %[high]\n" /*1clk*/\
-                        "	breq end" #x "\n" /*0.5clk*/ \
+                        "	brts end" #x "\n" /*0.5clk*/ \
                         "true" #x ":\n" \
                         "	out %[ddrd], %[low]\n" /*1clk; note: ST is 2clk*/ \
-                        "	brne end" #x "\n" /*0.5clk; note: nop on x=1..64 */
+                        "	brtc end" #x "\n" /*0.5clk; note: nop on x=1..64 */
+
+     // XXX: using bld op instead of brts op loses 0.5clk on x=7.
+
 #    define asm_loop_end(x) "end" #x ":\n"
 
      // read serial port from UDR0 without intterupts
      asm volatile (
-                   asm_loop_end(128)
+                   asm_loop_end(7)
+                   "	lds %[temp], %[udr]\n" /* 2clk; note: "in" op is not usable here because UDR0 is not an I/O register.*/
+                   asm_loop(0)
+                   asm_loop_end(0)
+                   "	nop\n" // XXX: should implement to exit the loop
+                   "	nop\n"
                    asm_loop(1)
                    asm_loop_end(1)
+                   "	nop\n"
+                   "	nop\n"
                    asm_loop(2)
                    asm_loop_end(2)
+                   "	nop\n"
+                   "	nop\n"
+                   asm_loop(3)
+                   asm_loop_end(3)
+                   "	nop\n"
+                   "	nop\n"
                    asm_loop(4)
                    asm_loop_end(4)
-                   asm_loop(8)
-                   asm_loop_end(8)
-                   asm_loop(16)
-                   asm_loop_end(16)
-                   asm_loop(32)
-                   asm_loop_end(32)
-                   asm_loop(64)
-                   asm_loop_end(64)
-                   asm_loop(128)
+                   "	nop\n"
+                   "	nop\n"
+                   asm_loop(5)
+                   asm_loop_end(5)
+                   "	nop\n"
+                   "	nop\n"
+                   asm_loop(6)
+                   asm_loop_end(6)
+                   "	nop\n"
+                   "	nop\n"
+                   asm_loop(7)
                    : [temp] "+r" (t)
                    : [high] "r" (high), [low] "r" (low), [udr] "X" (UDR0), [ddrd] "M" (_SFR_IO_ADDR(DDRD /*PORTD*/ ))
     );
@@ -242,7 +260,6 @@ void pdm_play(uint8_t pin, uint8_t val)
 
   restoreInterrupts(flags); // restore interrupt state
 }
-
 #endif
 
 
