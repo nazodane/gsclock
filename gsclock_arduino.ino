@@ -201,7 +201,6 @@ void pdm_play(uint8_t pin, uint8_t val)
   uint8_t out_new = *out;
 
   // DSD is 2.8224MHz but Arduino Uno R3 is 16MHz so 16MHz/5clk = 3.2Mhz (or 16MHz/5.5clk = 2.909Mhz) is the target.
-  // lds UDR0 (2clk) -> andi (1clk) -> brne (0.5clk) -> out DDRD (1clk) -> breq/brne (0.5clk) = 5clk? really? and how can I exit the loop?
   // The serial port baud rate is 400,000Hz but it should be ok: https://forum.arduino.cc/t/set-arduino-serial-baud-rate-above-115200-230400-256000-307200-614400/96235/9
 
   // Note: longest 16-bit timer (timer1) interrupt is 1s * (16,000,000 / ((2**16) * 1024)) = 238 ms so not enough.
