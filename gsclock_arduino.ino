@@ -200,14 +200,16 @@ void pdm_play(uint8_t pin, uint8_t val)
   if (pin != PDM_PIN) return;
   uint8_t out_new = *out;
 
-  // DSD is 2.8224MHz but Arduino Uno R3 is 16MHz so 16MHz/5clk = 3.2Mhz (or 16MHz/5.5clk = 2.909Mhz) is the target.
+  // DSD is 2.8224MHz but Arduino Uno R3 is 16MHz so 16MHz/5clk = 3.2Mhz is the target.
   // The serial port baud rate is 400,000Hz but it should be ok: https://forum.arduino.cc/t/set-arduino-serial-baud-rate-above-115200-230400-256000-307200-614400/96235/9
 
   // Note: longest 16-bit timer (timer1) interrupt is 1s * (16,000,000 / ((2**16) * 1024)) = 238 ms so not enough.
 
   // avr asm sim: https://jonopriestley.github.io/avrsim/
+  // avr ops: https://www.cs.shinshu-u.ac.jp/~haeiwa/m-com/instruction.html
 
-     uint8_t t;
+     uint8_t temp, zero = 0, cnt_low = 0, cnt_mid = 0, cnt_high = 0;
+     uint8_t step = 1; // the duration time is 1s / (16MHz / (40clk * ((2**8)**3)) / step) = 41.94304s / step
 
 #    define asm_loop(x, pin) "	bst %[temp], " #x "\n" /* 1clk */\
                         "	bld %[out_new], " #pin "\n" /* 1clk */\
@@ -218,14 +220,14 @@ void pdm_play(uint8_t pin, uint8_t val)
      asm volatile (
                    "	lds %[temp], %[udr]\n" /* 2clk; note: "in" op is not usable here because UDR0 is not an I/O register.*/
                    asm_loop(0, 7/*PDM_PIN*/)
-                   "	nop\n" // XXX: should implement to exit the loop
+                   "	nop\n"
                    "	nop\n"
                    "pdm_loop:"
                    asm_loop(1, 7/*PDM_PIN*/)
-                   "	nop\n"
-                   "	nop\n"
+                   "	add %[cnt_low], %[step]\n"
+                   "	adc %[cnt_mid], %[zero]\n"
                    asm_loop(2, 7/*PDM_PIN*/)
-                   "	nop\n"
+                   "	adc %[cnt_high], %[zero]\n"
                    "	nop\n"
                    asm_loop(3, 7/*PDM_PIN*/)
                    "	nop\n"
@@ -242,9 +244,10 @@ void pdm_play(uint8_t pin, uint8_t val)
                    asm_loop(7, 7/*PDM_PIN*/)
                    "	lds %[temp], %[udr]\n" /* 2clk */
                    asm_loop(0, 7/*PDM_PIN*/)
-                   "	rjmp pdm_loop\n"  /* 2clk */
-                   : [temp] "+r" (t), [out_new] "+r" (out_new)
-                   : [udr] "X" (UDR0), [ddrd] "M" (_SFR_IO_ADDR(DDRD /*PORTD*/ ))
+                   "	brcc pdm_loop\n"  /* 2clk on true*/
+                   : [temp] "+r" (temp), [out_new] "+r" (out_new), 
+                     [cnt_low] "+r" (cnt_low), [cnt_mid] "+r" (cnt_mid), [cnt_high] "+r" (cnt_high)
+                   : [udr] "X" (UDR0), [ddrd] "M" (_SFR_IO_ADDR(DDRD /*PORTD*/ )), [zero] "r" (zero), [step] "r" (step)
     );
 
   // lpf: https://elvistkf.wordpress.com/2016/04/19/arduino-implementation-of-filters/
@@ -254,7 +257,6 @@ void pdm_play(uint8_t pin, uint8_t val)
   restoreInterrupts(flags); // restore interrupt state
 }
 #endif
-
 
 void loop() {
   int buttonState = digitalRead(powerButtonPin);
