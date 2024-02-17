@@ -334,8 +334,8 @@ void pdm_playback_on_pin6()
                    out_from_bit(0, 6/*PDM_PIN*/)
                    "	brcc pdm_loop\n"  /* 2clk on true*/
                    : [temp] "+r" (temp), [out_new] "+r" (out_new), 
-                     [cnt_low] "+r" (cnt_low), [cnt_mid] "+r" (cnt_mid), [cnt_high] "+r" (cnt_high)
-                   : [udr] "M" (_SFR_MEM_ADDR(UDR0)), [portd] "M" (_SFR_IO_ADDR(PORTD)), [zero] "r" (zero), [step] "r" (step)
+                     [cnt_low] "+r" (cnt_low), [cnt_mid] "+r" (cnt_mid), [cnt_high] "+r" (cnt_high), [zero] "+r" (zero), [step] "+r" (step)
+                   : [udr] "M" (_SFR_MEM_ADDR(UDR0)), [portd] "M" (_SFR_IO_ADDR(PORTD))
     );
 
   // lpf: https://elvistkf.wordpress.com/2016/04/19/arduino-implementation-of-filters/

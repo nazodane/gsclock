@@ -172,7 +172,7 @@ if __name__ == '__main__':
 
             # DSD playback test
             print("QUERY: PDM playback via serial console")
-            with open("/media/nazo/99b6c642-e66e-487f-a871-78b86fa15fd51/_/beep-03.dsf", mode='rb') as f:
+            with open("/media/nazo/99b6c642-e66e-487f-a871-78b86fa15fd51/_/pdm_test.dsf", mode='rb') as f:
                 d = f.read()
                 # DSF specfication: https://dsd-guide.com/sites/default/files/white-papers/DSFFileFormatSpec_E.pdf
                 if d[0:4] != b"DSD " or d[0x3c] != 1 or d[0x50:0x54] != b"data":
@@ -185,8 +185,8 @@ if __name__ == '__main__':
                 DATA_LENGTH = math.ceil(16777216 / STEP)  # (2**8)**3 = 16777216
 
 #                send_data = d[0x5c:0x5c+min(dsf_size, DATA_LENGTH)]
-#                send_data = ((b'\xff' * 909) + (b'\x00' * 909)) * 220 * 3 # 3s 440Hz tone
-                send_data = ((b'\xff' * 75) + (b'\x00' * 75)) * 2000 * 3
+                send_data = ((b'\xff' * 114) + (b'\x00' * 114)) * 220 * 8 * 3 # 3s 440Hz tone
+#                send_data = ((b'\xff' * 12) + (b'\x00' * 12)) * 20000 * 3
 
                 send_data += b'\x00' * (DATA_LENGTH - len(send_data))
                 send_data = b'S' + send_data
@@ -275,7 +275,7 @@ if __name__ == '__main__':
 
 #                arduino.write(d[0x5c:0x5c+dsf_size])
 
-#                arduino.flush()
+                arduino.flush()
 
                 arduino.baudrate = old_baudrate
 #                arduino.write(b"0");
