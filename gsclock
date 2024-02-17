@@ -164,6 +164,12 @@ if __name__ == '__main__':
 #            line = arduino.readline().decode('utf-8').rstrip()
             process_line(line)
 
+###
+            line = arduino.read_until().decode('utf-8').rstrip()
+            print(line)
+            continue
+###
+
             # DSD playback test
             print("QUERY: PDM playback via serial console")
             with open("/media/nazo/99b6c642-e66e-487f-a871-78b86fa15fd51/_/beep-03.dsf", mode='rb') as f:
