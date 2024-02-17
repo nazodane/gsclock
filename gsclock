@@ -68,7 +68,7 @@ def connect_to_arduino():
             count = 0
             continue
         print("connecting %s..."%(port))
-        arduino = serial.Serial(port, 9600, timeout=1, writeTimeout=0) #, rtscts=False, dsrdtr=False
+        arduino = serial.Serial(port, 9600, timeout=1, writeTimeout=False) #, rtscts=False, dsrdtr=False, writeTimeout=0
         arduino.flush()
         arduino.read_until().decode('utf-8').rstrip() # drop the garbage input
         first_line = arduino.read_until().decode('utf-8').rstrip()
@@ -164,7 +164,6 @@ if __name__ == '__main__':
 #            line = arduino.readline().decode('utf-8').rstrip()
             process_line(line)
 
-            """
             # DSD playback test
             print("QUERY: PDM playback via serial console")
             with open("/media/nazo/99b6c642-e66e-487f-a871-78b86fa15fd51/_/beep-03.dsf", mode='rb') as f:
@@ -180,7 +179,8 @@ if __name__ == '__main__':
                 DATA_LENGTH = math.ceil(16777216 / STEP)  # (2**8)**3 = 16777216
 
 #                send_data = d[0x5c:0x5c+min(dsf_size, DATA_LENGTH)]
-                send_data = ((b'\xff' * 909) + (b'\x00' * 909)) * 220 * 3 # 3s 440Hz tone
+#                send_data = ((b'\xff' * 909) + (b'\x00' * 909)) * 220 * 3 # 3s 440Hz tone
+                send_data = ((b'\xff' * 75) + (b'\x00' * 75)) * 2000 * 3
 
                 send_data += b'\x00' * (DATA_LENGTH - len(send_data))
                 send_data = b'S' + send_data
@@ -203,8 +203,25 @@ if __name__ == '__main__':
                     print(line)
                     continue
 
+                arduino.flush()
                 old_baudrate = arduino.baudrate
+
+                """
+### udr0 debug code - also see the server side
+                from ctypes import *
+#                libc = CDLL("libc.so.6")
+#                libc.write(fd, b"weshouldsendsomething", 22)
+                arduino.write(b"weshouldsendsomething")
 #                arduino.flush()
+
+#                os.writev(fd, [b"weshouldsendsomething"])
+                while True:
+                    line = arduino.read_until().decode('utf-8').rstrip()
+                    print(line)
+                exit(0)
+###
+"""
+
                 arduino.baudrate = 400000; # 400kHz
 
                 ns = None
@@ -243,11 +260,13 @@ if __name__ == '__main__':
 
 #                os.writev(fd, [send_data])
 
-                libc.write(fd, send_data, DATA_LENGTH)
+#                libc.write(fd, send_data, DATA_LENGTH)
 #                sleep(41.94304/STEP)
 
 
-#                arduino.write(send_data)
+                arduino.write(send_data)
+#                sleep(4)
+
 #                arduino.write(d[0x5c:0x5c+dsf_size])
 
 #                arduino.flush()
@@ -258,7 +277,7 @@ if __name__ == '__main__':
                 line = arduino.read_until().decode('utf-8').rstrip()
                 print(line)
                 print("SUCCESS: DSF playback done!")
-"""
+
 
             line = arduino.read_until().decode('utf-8').rstrip()
             print(line)

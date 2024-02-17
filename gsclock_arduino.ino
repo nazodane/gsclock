@@ -175,14 +175,80 @@ void pdm_playback_on_pin6()
 
   uint8_t flags;
 
-  // XXX: PORTD (D0 - D7) should be safe but PORTB has crystal inputs (6-7) and I don't know it's safe.
+  // PORTD (D0 - D7) / PORTB (D8-D13)
   // https://docs.arduino.cc/retired/hacking/software/PortManipulation/
   if (out != &PORTD) return;
 
   uint8_t temp, zero = 0, cnt_low = 0, cnt_mid = 0, cnt_high = 0;
   uint8_t step = 1; // the duration time is 1s / (16MHz / (40clk * ((2**8)**3)) / step) = 41.94304s / step
 
+/*
+  // portd debug code
+  Serial.print("mesg: before: ");
+  Serial.println(*out, BIN);
+  temp = *out;
+  for (long int tt = 0; tt < 1000; tt++) {
+    for (long int t = 0; t < 100; t++)
+      asm volatile (
+                    "	set\n" // 1clk
+                    "	bld %[temp], 6\n" // 1clk
+                    "	out %[portd], %[temp]\n" // 1clk
+                    "	nop\n	nop\n"
+                    "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                    "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                    "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                    "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                    "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                    "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                    "	nop\n	nop\n	nop\n	nop\n	nop\n"
+               : [temp] "+r" (temp)
+               : [portd] "M" (_SFR_IO_ADDR(PORTD)));
+    for (long int t = 0; t < 100; t++)
+      asm volatile (
+                    "	clt\n"
+                    "	bld %[temp], 6\n"
+                    "	out %[portd], %[temp]\n"
+                    "	nop\n	nop\n"
+                    "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                    "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                    "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                    "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                    "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                    "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                    "	nop\n	nop\n	nop\n	nop\n	nop\n"
+               : [temp] "+r" (temp)
+               : [portd] "M" (_SFR_IO_ADDR(PORTD)));
+  }
+  Serial.print("mesg: after: ");
+  Serial.println(*out, BIN);
+  return;
+*/
+
   Serial.println("mesg: PDM playback ready!");
+
+/*
+  // udr0 debug code - also see the client side
+  Serial.flush();
+  while(Serial.available()) Serial.read();
+  for (long int t = 0; t < 100; t++) {
+    for (long int t = 0; t < 100; t++) {
+      asm volatile (
+                          "lds %[temp], %[udr]\n" // 2clk
+                          "sts %[udr], %[temp]\n" // 2clk
+                 : [temp] "+r" (temp)
+                 : [udr] "M" (_SFR_MEM_ADDR(UDR0)));
+      __builtin_avr_delay_cycles(16000000 / 9600 - 4);
+    }
+    asm volatile (
+                        "ldi %[temp], '\n'\n" // 1clk
+                        "sts %[udr], %[temp]\n" // 2clk
+               : [temp] "+r" (temp)
+               : [udr] "M" (_SFR_MEM_ADDR(UDR0)));
+    __builtin_avr_delay_cycles(16000000 / 9600 - 3);
+  }
+
+  return;
+*/
 
 
   //https://forum.arduino.cc/t/change-baud-rate-at-runtime/368191/2
@@ -227,7 +293,6 @@ void pdm_playback_on_pin6()
 
 
      // read serial port value from UDR0 without intterupts
-     // TODO: detect stop bits?
      asm volatile (
                    "cmd_wait:" // wait 'S' command
                    "	lds %[temp], %[udr]\n" // 2clk
@@ -270,7 +335,7 @@ void pdm_playback_on_pin6()
                    "	brcc pdm_loop\n"  /* 2clk on true*/
                    : [temp] "+r" (temp), [out_new] "+r" (out_new), 
                      [cnt_low] "+r" (cnt_low), [cnt_mid] "+r" (cnt_mid), [cnt_high] "+r" (cnt_high)
-                   : [udr] "X" (UDR0), [portd] "M" (_SFR_IO_ADDR(PORTD)), [zero] "r" (zero), [step] "r" (step)
+                   : [udr] "M" (_SFR_MEM_ADDR(UDR0)), [portd] "M" (_SFR_IO_ADDR(PORTD)), [zero] "r" (zero), [step] "r" (step)
     );
 
   // lpf: https://elvistkf.wordpress.com/2016/04/19/arduino-implementation-of-filters/
@@ -287,6 +352,7 @@ void pdm_playback_on_pin6()
   Serial.begin(9600);
   while(Serial.available()) Serial.read();
 
+  digitalWrite(PDM_PIN, LOW);
   Serial.println("mesg: recover from PDM playback!");
 }
 
