@@ -229,6 +229,18 @@ void pdm_playback_on_pin6()
      // read serial port value from UDR0 without intterupts
      // TODO: detect stop bits?
      asm volatile (
+                   "cmd_wait:" // wait 'S' command
+                   "	lds %[temp], %[udr]\n" // 2clk
+                   "	cpi %[temp], 0x53\n" // 1clk
+                   "	brne cmd_wait\n" // 1clk on false
+                   "	nop\n"
+                   "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                   "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                   "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                   "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                   "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                   "	nop\n	nop\n	nop\n	nop\n	nop\n"
+                   "	nop\n	nop\n	nop\n	nop\n	nop\n"
                    "	lds %[temp], %[udr]\n" /* 2clk; note: "in" op is not usable here because UDR0 is not an I/O register.*/
                    out_from_bit(0, 6/*PDM_PIN*/)
                    "	nop\n"

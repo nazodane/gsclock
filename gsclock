@@ -4,6 +4,7 @@
 from time import sleep, time_ns
 import os
 from os.path import expanduser
+import math
 
 print("QUERY: vertical monitor check via screeninfo module")
 clock_monitor = None
@@ -174,6 +175,16 @@ if __name__ == '__main__':
                 dsf_size = int.from_bytes(d[0x54:0x5c], byteorder='little') - 12
                 print("DSF file recognized! size=%s"%(dsf_size))
 
+
+                STEP = 1
+                DATA_LENGTH = math.ceil(16777216 / STEP)  # (2**8)**3 = 16777216
+
+#                send_data = d[0x5c:0x5c+min(dsf_size, DATA_LENGTH)]
+                send_data = ((b'\xff' * 909) + (b'\x00' * 909)) * 220 * 3 # 3s 440Hz tone
+
+                send_data += b'\x00' * (DATA_LENGTH - len(send_data))
+                send_data = b'S' + send_data
+
                 print("Send the command for PDM playback to the device!")
                 ok = False
                 for i in range(10):
@@ -195,10 +206,12 @@ if __name__ == '__main__':
                 old_baudrate = arduino.baudrate
 #                arduino.flush()
                 arduino.baudrate = 400000; # 400kHz
-#                sleep(0.001);
+
                 ns = None
                 fd = arduino.fd
                 print("DSF data sending start on fd: %s!"%(fd))
+
+                sleep(0.1)
 
                 from ctypes import *
                 libc = CDLL("libc.so.6")
@@ -227,21 +240,24 @@ if __name__ == '__main__':
 
 #                data_to_write = d[0x5c:0x5c + dsf_size]
 #                print(len(data_to_write))
-#                os.writev(fd, [data_to_write])
 
-                libc.write(fd, d[0x5c:0x5c+dsf_size], dsf_size)
+#                os.writev(fd, [send_data])
+
+                libc.write(fd, send_data, DATA_LENGTH)
+#                sleep(41.94304/STEP)
 
 
+#                arduino.write(send_data)
 #                arduino.write(d[0x5c:0x5c+dsf_size])
 
 #                arduino.flush()
+
                 arduino.baudrate = old_baudrate
 #                arduino.write(b"0");
                 print("DSF data sending done!")
                 line = arduino.read_until().decode('utf-8').rstrip()
                 print(line)
                 print("SUCCESS: DSF playback done!")
-                exit()
 """
 
             line = arduino.read_until().decode('utf-8').rstrip()
