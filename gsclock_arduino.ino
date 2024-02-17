@@ -280,7 +280,7 @@ void pdm_playback_on_pin6()
   // $ cd sox
   // $ autoreconf -ivf && ./configure && make -j8
   // $ sudo make install
-  // $ LD_LIBRARY_PATH=/usr/local/lib sox pdm_test.wav pdm_test.dsf rate -v 32000000 sdm -f sdm-8
+  // $ LD_LIBRARY_PATH=/usr/local/lib sox pdm_mono_test.wav pdm_mono_test.dsf rate -v 32000000 sdm -f sdm-8
 
   // Note: longest 16-bit timer (timer1) interrupt is 1s * (16,000,000 / ((2**16) * 1024)) = 238 ms so not enough.
 
