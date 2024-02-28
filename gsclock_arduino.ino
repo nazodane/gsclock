@@ -63,7 +63,7 @@ static bool measure_environment(float *temperature, float *humidity) {
 #define FALSE 0
 #define TRUE 1
 
-int powerButtonPin = 2; // D2
+int powerButtonPin = 13; // D13
 int powerLedPin = 4; // D4
 int activeBuzzerPin = 6; //D6
 int irReceiveButtonPin = 10; //D10
@@ -71,6 +71,8 @@ int irLedPin = 9; // D9
 int irReceivePin = 5;  // D5
 int irSendPin = 3; // D3
 int pirPin = 11; // D11
+int usonicTrigPin = 12; // D12
+int usonicEchoPin = 2; // D2 (or D3 for interrupt on Arduino Uno R3)
 int photoresistorPin = 0; // A0
 int direct3V3VoltagePin = 5;  // A5
 int currentButtonState = FALSE;
@@ -108,6 +110,8 @@ void setup() {
   pinMode(powerLedPin, OUTPUT);
   pinMode(irReceiveButtonPin, INPUT);
   pinMode(irLedPin, OUTPUT);
+  pinMode(usonicTrigPin, OUTPUT);
+  pinMode(usonicEchoPin, INPUT);
   IrSender.begin(irSendPin);
   pinMode(activeBuzzerPin, OUTPUT);
   print_power_change();
@@ -356,6 +360,53 @@ void pdm_playback_on_pin6()
   Serial.println("mesg: recover from PDM playback!");
 }
 
+
+
+
+volatile unsigned long echoStartTime = 0, echoEndTime = 0;
+
+void usonicEcho(){
+  volatile long echoChangeTime = micros();
+
+  if(digitalRead(usonicEchoPin) == HIGH)
+    echoStartTime = echoChangeTime;
+  else
+    echoEndTime = echoChangeTime;
+}
+
+void usonicTrig(float temperature){
+  digitalWrite(usonicTrigPin, LOW); // just to be sure
+  delayMicroseconds(2); // wait 2μs
+  attachInterrupt(digitalPinToInterrupt(usonicEchoPin), usonicEcho, CHANGE);
+
+  Serial.println("mesg: trig ultrasonic module");
+  // trig 10μs 
+  digitalWrite(usonicTrigPin, HIGH);
+  delayMicroseconds(10); // XXX: delay vs. PWM
+  digitalWrite(usonicTrigPin, LOW);
+  Serial.println("mesg: wait ultrasonic echo signal");
+
+//  while(!echoEndTime) { /*do nothing*/ }
+  delayMicroseconds(1000);
+
+  detachInterrupt(digitalPinToInterrupt(usonicEchoPin));
+  if (!echoStartTime || !echoEndTime) {
+    Serial.println("mesg: failed to recieve the ultrasonic echo signal");
+    echoStartTime = echoEndTime = 0;
+    return;
+  }
+  
+  Serial.println("mesg: recieved the ultrasonic echo signal");
+  Serial.print("mesg: usraw: "); // don't do four letter
+
+  // MIT License
+  // Copyright (C) 2016 Martin Sosic
+  // https://github.com/Martinsos/arduino-lib-hc-sr04/blob/master/src/HCSR04.cpp
+  Serial.println((echoEndTime - echoStartTime) * ( (0.03313 + 0.0000606 * temperature) /2));
+
+  echoStartTime = echoEndTime = 0;
+}
+
 void loop() {
   int buttonState = digitalRead(powerButtonPin);
   if (buttonState && buttonState != currentButtonState){
@@ -530,7 +581,6 @@ void loop() {
         ir_send(IR_LIGHTING_FULL);
     }
 
-
     float temperature;
     float humidity;
 
@@ -539,6 +589,8 @@ void loop() {
       Serial.println(temperature, 1);
       Serial.print("humi: ");
       Serial.println(humidity, 1);
+
+//      usonicTrig(temperature);
     }
 
     delay(500);  // delay in between reads for stability
