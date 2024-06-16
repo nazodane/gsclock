@@ -71,8 +71,8 @@ int irLedPin = 9; // D9
 int irReceivePin = 5;  // D5
 int irSendPin = 3; // D3
 int pirPin = 11; // D11
-int usonicTrigPin = 12; // D12
-int usonicEchoPin = 2; // D2 (or D3 for interrupt on Arduino Uno R3)
+//int usonicTrigPin = 12; // D12
+//int usonicEchoPin = 2; // D2 (or D3 for interrupt on Arduino Uno R3)
 int photoresistorPin = 0; // A0
 int direct3V3VoltagePin = 5;  // A5
 int currentButtonState = FALSE;
@@ -110,8 +110,8 @@ void setup() {
   pinMode(powerLedPin, OUTPUT);
   pinMode(irReceiveButtonPin, INPUT);
   pinMode(irLedPin, OUTPUT);
-  pinMode(usonicTrigPin, OUTPUT);
-  pinMode(usonicEchoPin, INPUT);
+//  pinMode(usonicTrigPin, OUTPUT);
+//  pinMode(usonicEchoPin, INPUT);
   IrSender.begin(irSendPin);
   pinMode(activeBuzzerPin, OUTPUT);
   print_power_change();
@@ -362,7 +362,7 @@ void pdm_playback_on_pin6()
 
 
 
-
+#if 0
 volatile unsigned long echoStartTime = 0, echoEndTime = 0;
 
 void usonicEcho(){
@@ -406,6 +406,7 @@ void usonicTrig(float temperature){
 
   echoStartTime = echoEndTime = 0;
 }
+#endif
 
 void loop() {
   int buttonState = digitalRead(powerButtonPin);
